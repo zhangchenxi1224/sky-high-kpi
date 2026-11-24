@@ -11,8 +11,9 @@ for(const f of files.filter(f=>f.endsWith('.js')&&f!==main)){
 const image='data:image/webp;base64,'+(await readFile('dist/assets/rooms.webp')).toString('base64');
 const style=await readFile(`dist/assets/${css}`,'utf8');
 let html=await readFile('dist/index.html','utf8');
+const licenses=await readFile('dist/THIRD_PARTY_LICENSES.txt','utf8');
 html=html.replace(/<script\b[^>]*src="[^"]+"[^>]*><\/script>/g,'').replace(/<link\b[^>]*rel="stylesheet"[^>]*>/g,'');
-html=html.replace('</head>',()=>`<style>${style}</style></head>`);
+html=html.replace('</head>',()=>`<style>${style}</style><!-- ${licenses.replaceAll('--','—')} --></head>`);
 html=html.replace('</body>',()=>`<script>window.__ROOMS__=${JSON.stringify(image)};document.documentElement.style.setProperty('--rooms-sprite','url("'+window.__ROOMS__+'")');</script><script type="module">${js.replaceAll('</script','<\\/script')}</script></body>`);
 for(const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)){await transform(match[1],{loader:'js',format:'esm'});}
 await writeFile('delivery/绩点卷上天-离线版.html',html);
