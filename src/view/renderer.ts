@@ -5,6 +5,7 @@ const mix=(a:string,b:string,t:number)=>{const ca=parseInt(a.slice(1),16),cb=par
 export class Renderer {
   ctx:CanvasRenderingContext2D;sheet=new Image();sprites:HTMLCanvasElement[]=[];width=960;height=720;scale=1;effects=true;night=false;
   sky:HTMLCanvasElement|null=null;skyKey='';
+  private reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
   constructor(public canvas:HTMLCanvasElement){this.ctx=canvas.getContext('2d')!;this.sheet.onload=()=>this.prepareSprites();this.sheet.src=(window as unknown as {__ROOMS__?:string}).__ROOMS__??`${import.meta.env.BASE_URL}assets/rooms.webp`;}
   prepareSprites(){
     const s=document.createElement('canvas');s.width=this.sheet.width;s.height=this.sheet.height;const c=s.getContext('2d')!;c.drawImage(this.sheet,0,0);const pixels=c.getImageData(0,0,s.width,s.height).data;
@@ -19,17 +20,30 @@ export class Renderer {
   rect(r:Rect,color:string){this.ctx.fillStyle=color;this.ctx.fillRect(Math.round(r.x),Math.round(r.y),Math.round(r.w),Math.round(r.h));}
   render(e:GameEngine){
     const c=this.ctx,w=this.width,h=this.height;this.drawSky(e);c.save();
-    const impact=this.effects&&e.time-e.lastLandTime<.15?Math.sin((e.time-e.lastLandTime)*100)*2:0;c.translate(impact,0);
-    const center=w/2-e.cameraX;this.drawGround(center,e.groundScreen+e.cameraY);
-    for(const p of e.tower){const y=p.y+e.groundScreen+e.cameraY;if(y>h+90||y< -100)continue;let sy=1;if(this.effects&&p===e.tower.at(-1)){const age=e.time-e.lastLandTime;if(age<.3)sy=1-Math.sin(age/.3*Math.PI)*.055;}
-      this.room(p.block.sprite,center+p.x,y,sy);
+    const zoom=e.viewZoom;
+    c.scale(zoom,zoom);
+    const center=w/(2*zoom)-e.cameraX;
+    const ground=e.groundScreen+e.cameraY;
+    this.drawGround(center,ground,w/zoom,h/zoom);
+    const roofSway=this.effects&&!this.reducedMotion.matches?e.sway:0;
+    // Adjacent floors share their edge displacement, and the base stays planted.
+    const flexHeight=Math.min(6,e.floor)||1;
+    const offsetAt=(level:number)=>roofSway*Math.max(0,1-(e.floor-level)/flexHeight);
+    for(const p of e.tower){const y=p.y+ground;if(y>h/zoom||y< -100)continue;let sy=1;if(this.effects&&p===e.tower.at(-1)){const age=e.time-e.lastLandTime;if(age<.3)sy=1-Math.sin(age/.3*Math.PI)*.055;}
+      const level=-p.y/RULES.height,top=offsetAt(level),bottom=offsetAt(level-1);
+      c.save();
+      c.translate(center+p.x+top,y);
+      c.transform(1,0,(bottom-top)/RULES.height,1,0,0);
+      this.room(p.block.sprite,0,0,sy);
+      c.restore();
     }
     if(e.phase==='READY'){
       this.rope(w/2,-48,w/2,132);this.room(0,w/2,156);this.label('高数',w/2+58,197,'#fff1cf');
     }else{
-      if(e.phase==='SWINGING'){this.rope(center+e.anchorX,-48,center+e.hookX,e.hookY);}
+      const craneCenter=center+roofSway;
+      if(e.phase==='SWINGING'){this.rope(craneCenter+e.anchorX,-48,craneCenter+e.hookX,e.hookY);}
       else if(!e.finished){const hx=center+e.anchorX+Math.sin(e.phaseAngle)*10;this.rope(center+e.anchorX,-48,hx,105);}
-      if(e.current){const x=center+e.currentX,y=e.currentY+e.groundScreen+e.cameraY;
+      if(e.current){const x=craneCenter+e.currentX,y=e.currentY+ground;
         c.save();c.translate(x,y+44);if(e.phase==='GAME_OVER')c.rotate(e.rotation);this.room(e.current.sprite,0,-44);c.restore();
         if(e.phase==='SWINGING'){
           this.label(e.current.name,x+58,y+37,'#fff4da');
@@ -41,19 +55,20 @@ export class Renderer {
       }
     }
     const age=e.time-e.lastLandTime;
-    if(age<1.2&&e.floor>0){const x=center+e.topX,y=e.topY+e.groundScreen+e.cameraY-19-age*12;
+    if(age<1.2&&e.floor>0){const x=center+roofSway+e.topX,y=e.topY+ground-19-age*12;
       if(e.verdict==='PERFECT'){
         if(this.effects){c.globalAlpha=Math.max(0,1-age/1);for(let i=0;i<12;i++){const a=i/12*Math.PI*2,r=45+age*65;c.fillStyle=i%2?'#fff9dc':'#ffe28a';c.fillRect(x+Math.cos(a)*r-2,y+58+Math.sin(a)*r-2,4,4);}c.globalAlpha=1;}
         c.font='bold 23px "Courier New",monospace';c.textAlign='center';c.lineWidth=3;c.strokeStyle='#24314b';c.strokeText('PERFECT',x,y-23);c.fillStyle='#ffdf8b';c.fillText('PERFECT',x,y-23);
       }
       this.label(e.rewardLabel,x,y-3,'#fff0ca',true);
+      if(e.landingFeedback)this.label(e.landingFeedback,x,y+24,e.verdict==='PERFECT'?'#b8ead4':'#ffbf9b',true);
     }
     c.restore();
     if(this.effects&&e.phase==='SWINGING'&&e.ddl<=2){const g=c.createRadialGradient(w/2,h/2,Math.min(w,h)*.2,w/2,h/2,Math.max(w,h)*.7);g.addColorStop(0,'#ef434300');g.addColorStop(1,`rgba(220,48,67,${.1+Math.sin(e.time*15)**2*.22})`);c.fillStyle=g;c.fillRect(0,0,w,h);}
   }
   room(sprite:number,x:number,y:number,sy=1){const c=this.ctx;c.imageSmoothingEnabled=false;const image=this.sprites[sprite];if(image)c.drawImage(image,Math.round(x-44),Math.round(y+88*(1-sy)),88,88*sy);else{c.fillStyle='#e8c28f';c.fillRect(x-44,y,88,88);c.fillStyle='#30445f';c.fillRect(x-34,y+18,28,52);c.fillRect(x+6,y+18,28,52);}}
   rope(px:number,py:number,x:number,y:number){const c=this.ctx;c.strokeStyle='#233047';c.lineWidth=2;c.beginPath();c.moveTo(Math.round(px),py);c.lineTo(Math.round(x),Math.round(y));c.stroke();c.fillStyle='#e2c89e';c.fillRect(x-2,y-3,4,7);c.strokeRect(x-2,y-3,4,7);c.beginPath();c.moveTo(x,y+7);c.lineTo(x-31,y+28);c.moveTo(x,y+7);c.lineTo(x+31,y+28);c.stroke();}
-  label(text:string,x:number,y:number,color:string,center=false){const c=this.ctx;c.font='bold 14px "Microsoft YaHei",sans-serif';const tw=c.measureText(text).width;let left=center?x-tw/2-6:x;left=Math.max(7,Math.min(this.width-tw-19,left));c.fillStyle=color;c.fillRect(left,y-15,tw+12,23);c.fillStyle='#263049';c.textAlign='left';c.fillText(text,left+6,y+2);}
+  label(text:string,x:number,y:number,color:string,center=false){const c=this.ctx;c.font='bold 14px "Microsoft YaHei",sans-serif';const tw=c.measureText(text).width;let left=center?x-tw/2-6:x;const visibleWidth=this.canvas.width/c.getTransform().a;left=Math.max(7,Math.min(visibleWidth-tw-19,left));c.fillStyle=color;c.fillRect(left,y-15,tw+12,23);c.fillStyle='#263049';c.textAlign='left';c.fillText(text,left+6,y+2);}
   drawSky(e:GameEngine){
     const w=this.width,h=this.height,c=this.ctx,alt=Math.min(1,e.floor/55),night=this.night?1:Math.max(0,(e.floor-22)/32);const k=`${Math.round(w)}-${Math.round(h)}-${Math.floor(e.cameraY/22)}-${this.night}`;
     if(k!==this.skyKey){this.skyKey=k;const bg=document.createElement('canvas');bg.width=Math.ceil(w/2);bg.height=Math.ceil(h/2);const b=bg.getContext('2d')!;b.scale(.5,.5);
@@ -80,9 +95,9 @@ export class Renderer {
   cloud(c:CanvasRenderingContext2D,x:number,y:number,width:number,night:number){c.fillStyle=mix('#dac7f3','#666492',Math.min(1,night));c.fillRect(x,y,width,4);c.fillRect(x+width*.16,y-5,width*.7,6);c.fillRect(x+width*.3,y-11,width*.3,8);c.fillStyle=mix('#efceeb','#8173a0',Math.min(1,night));c.fillRect(x+width*.21,y-3,width*.22,4);c.fillRect(x+width*.45,y-14,width*.12,8);c.fillRect(x+width*.67,y+2,width*.2,3);}
   waterTower(c:CanvasRenderingContext2D,x:number,y:number){c.strokeStyle='#7184a9';c.lineWidth=2;c.fillStyle='#afb9d3';c.fillRect(x-17,y,34,32);c.strokeRect(x-17,y,34,32);c.beginPath();c.moveTo(x-20,y);c.lineTo(x,y-13);c.lineTo(x+20,y);c.closePath();c.fill();c.stroke();for(let i=-1;i<=1;i++)c.strokeRect(x+i*10-2,y,4,32);c.beginPath();c.moveTo(x-13,y+32);c.lineTo(x-18,y+57);c.lineTo(x+13,y+32);c.lineTo(x+18,y+57);c.lineTo(x-13,y+32);c.stroke();}
   clockTower(c:CanvasRenderingContext2D,x:number,y:number){c.fillStyle='#a6b7d4';c.fillRect(x-22,y,44,130);c.strokeStyle='#7184ac';c.lineWidth=2;c.strokeRect(x-22,y,44,34);c.fillStyle='#91b3ba';c.beginPath();c.moveTo(x-26,y);c.lineTo(x,y-20);c.lineTo(x+26,y);c.closePath();c.fill();c.stroke();c.beginPath();c.moveTo(x,y-20);c.lineTo(x,y-31);c.stroke();c.fillStyle='#f0e6cd';c.beginPath();c.arc(x,y+17,10,0,Math.PI*2);c.fill();c.beginPath();c.moveTo(x,y+10);c.lineTo(x,y+17);c.lineTo(x+5,y+20);c.stroke();c.fillStyle='#829cc2';for(let i=-1;i<=1;i++)c.fillRect(x+i*12-3,y+40,6,85);}
-  drawGround(center:number,y:number){
-    if(y>this.height+160)return;const c=this.ctx,w=this.width;
-    c.fillStyle='#a6a1b7';c.fillRect(0,y,w,this.height-y+200);c.fillStyle='#9695ab';for(let row=0;row<15;row++){for(let j=0;j<w/50;j++){c.fillRect(j*50+row%2*25,y+row*12+4,36,2);}}
+  drawGround(center:number,y:number,w:number,h:number){
+    if(y>h+160)return;const c=this.ctx;
+    c.fillStyle='#a6a1b7';c.fillRect(0,y,w,h-y+200);c.fillStyle='#9695ab';for(let row=0;row<15;row++){for(let j=0;j<w/50;j++){c.fillRect(j*50+row%2*25,y+row*12+4,36,2);}}
     c.fillStyle='#4c5c7c';c.fillRect(0,y-10,w,10);c.fillStyle='#e6d6b9';c.fillRect(0,y-12,w,3);
     // Chain-link fence, pixel posts and campus construction stripes.
     c.save();c.beginPath();c.rect(0,y-103,w,85);c.clip();c.strokeStyle='#8291ae';c.lineWidth=1;for(let x=-100;x<w+100;x+=16){c.beginPath();c.moveTo(x,y-104);c.lineTo(x+90,y-18);c.moveTo(x+90,y-104);c.lineTo(x,y-18);c.stroke();}c.restore();

@@ -10,6 +10,7 @@ export class GameEngine {
   tower:Placed[]=[];current:Block|null=null;currentX=0;currentY=0;velocity=0;rotation=0;phaseAngle=-.65;hookAngle=0;hookX=0;hookY=0;anchorX=0;
   cameraY=0;cameraX=0;cameraFromY=0;cameraFromX=0;cameraTime=0;groundScreen=620;hangingScreen=170;viewHeight=720;ropeLength=190;
   time=0;phaseTime=0;ddl=8;paused=false;finished=false;forced=false;warningPlayed=false;rollback=0;
+  instability=0;sway=0;private swayVelocity=0;landingFeedback='';
   speedNext=1;angleNext=1;speedMultiplier=1;angleMultiplier=1;practiceLeft=0;notesLeft=0;coffeeUntil=0;
   message='';messageUntil=0;rewardLabel='';verdict='';lastLandTime=-5;drawHistory:Kind[]=[];drawIndex=0;
   seed:number;mode:'normal'|'fixed';random:()=>number;listeners=new Set<(event:GameEvent)=>void>();private accumulator=0;private extremeAnnounced=false;
@@ -18,7 +19,20 @@ export class GameEngine {
   emit(event:GameEvent){this.listeners.forEach(fn=>fn(event));}
   say(text:string){this.message=text;this.messageUntil=this.time+3.2;this.emit({type:'message',text});}
   choose(pool:string[]){return pool[Math.floor(this.random()*pool.length)];}
-  setViewport(height:number){this.viewHeight=height;this.groundScreen=height-100;this.hangingScreen=Math.max(126,height*.23);this.ropeLength=this.hangingScreen+24;}
+  setViewport(height:number){
+    this.viewHeight=height;this.groundScreen=height-100;this.hangingScreen=Math.max(126,height*.23);this.ropeLength=this.hangingScreen+24;
+    this.cameraY=this.cameraTarget(this.floor);
+    if(this.phase==='CAMERA_SHIFT')this.cameraFromY=this.cameraTarget(this.floor-1);
+    if(this.phase==='SWINGING')this.updateHook();
+  }
+  get viewZoom(){
+    const transition=this.phase==='CAMERA_SHIFT'?1-Math.min(1,this.cameraTime/.43):0;
+    return 1-.18*Math.min(1,Math.max(0,this.floor-transition)/6);
+  }
+  private cameraTarget(floor:number){
+    const roof=Math.max(this.hangingScreen+RULES.height+75,this.viewHeight/.82-6*RULES.height);
+    return Math.max(0,floor*RULES.height+roof-this.groundScreen);
+  }
   get topX(){return this.tower.at(-1)?.x??0;}
   get topY(){return -this.floor*RULES.height;}
   get coffeeRemaining(){return Math.max(0,this.coffeeUntil-this.time);}
@@ -43,6 +57,12 @@ export class GameEngine {
   update(dt:number){if(this.paused||this.phase==='READY'||this.finished)return;this.accumulator+=Math.max(0,dt);while(this.accumulator>=1/120){this.step(1/120);this.accumulator-=1/120;if(this.finished)break;}}
   private step(dt:number){
     this.time+=dt;this.phaseTime+=dt;
+    // Recent placement errors set the sustained sway; each impact adds a directional kick.
+    if(RULES.towerSway){
+      const target=9*this.instability*Math.sin(this.time*3.2);
+      this.swayVelocity+=((target-this.sway)*64-this.swayVelocity*9)*dt;
+      this.sway+=this.swayVelocity*dt;
+    }
     if(this.phase==='SWINGING'){
       this.phaseAngle+=this.params.omega*dt;this.updateHook();this.ddl=Math.max(0,RULES.ddl-this.phaseTime);
       if(this.ddl<=2&&!this.warningPlayed){this.warningPlayed=true;this.emit({type:'warning'});}
@@ -52,7 +72,7 @@ export class GameEngine {
       if(this.currentY+RULES.height>=this.topY){this.phase='RESOLVE';this.resolve();}
     }else if(this.phase==='CAMERA_SHIFT'){
       this.cameraTime+=dt;const p=Math.min(1,this.cameraTime/.43),ease=1-(1-p)**3;
-      this.cameraY=this.cameraFromY+(Math.max(0,this.floor-1)*RULES.height-this.cameraFromY)*ease;this.cameraX=this.cameraFromX+(this.topX-this.cameraFromX)*ease;
+      this.cameraY=this.cameraFromY+(this.cameraTarget(this.floor)-this.cameraFromY)*ease;this.cameraX=this.cameraFromX+(this.topX-this.cameraFromX)*ease;
       if(p>=1)this.spawn();
     }else if(this.phase==='GAME_OVER'){
       this.velocity+=RULES.gravity*dt;this.currentY+=this.velocity*dt;this.currentX+=Math.sign(this.currentX-this.topX||1)*80*dt;this.rotation+=Math.sign(this.currentX-this.topX||1)*dt*2.8;
@@ -65,6 +85,17 @@ export class GameEngine {
       this.phase='GAME_OVER';this.phaseTime=0;this.say(this.forced?'死线提交，落点未通过。爱你老己，下把再来':this.choose(memes.danmakuBank.gameOver));this.emit({type:'miss'});return;
     }
     const perfect=verdict==='PERFECT';this.combo=perfect?this.combo+(block.kind==='study'?2:1):0;this.maxCombo=Math.max(this.maxCombo,this.combo);if(perfect)this.perfects++;
+    const previous=this.instability;
+    const error=Math.min(1,Math.max(0,(Math.abs(delta)/RULES.width-.08)/.42));
+    this.instability=perfect?previous*.55:Math.min(1,previous*.75+error*.44);
+    this.swayVelocity+=Math.sign(delta)*error*60;
+    this.landingFeedback='';
+    if(!perfect&&error>=.3){
+      const side=delta<0?'偏左':'偏右';
+      this.landingFeedback=side+(this.instability>=.55?' · 越晃越厉害':' · 楼晃了');
+    }else if(perfect&&previous>=.28){
+      this.landingFeedback='对齐了 · 楼在回稳';
+    }
     // Only 2 world pixels of correction; the remaining offset stays real.
     if(perfect)this.currentX-=Math.sign(delta)*Math.min(2,Math.abs(delta));
     const r=reward(this.kpi,block,perfect,this.combo,this.practiceLeft>0);this.kpi=r.kpi;this.rewardLabel=r.label;

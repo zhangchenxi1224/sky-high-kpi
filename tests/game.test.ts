@@ -6,6 +6,32 @@ const approx=(a:number,b:number)=>assert.ok(Math.abs(a-b)<1e-7,`${a} != ${b}`);
 const block=(id:string)=>({...catalog.find(b=>b.id===id)!});
 function land(e:GameEngine,id:string,delta=0){if(e.phase==='READY')e.start();e.current=block(id);e.phase='SWINGING';e.currentX=e.topX+delta;e.currentY=e.topY-RULES.height-1;e.drop();e.update(.05);assert.equal(e.phase,'CAMERA_SHIFT');}
 function next(e:GameEngine){e.update(.5);assert.equal(e.phase,'SWINGING');}
+test('opposite errors accumulate sway even when their permanent offsets cancel; precise landings settle it',()=>{
+  const e=new GameEngine(42,'fixed');
+  land(e,'study',36);
+  assert.ok(e.sway>0);
+  const first=e.instability;
+  next(e);land(e,'study',-36);
+  assert.equal(e.topX,0);assert.ok(e.instability>first);
+  assert.match(e.landingFeedback,/偏左/);
+  for(let i=0;i<4;i++){next(e);land(e,'study',i%2===0?36:-36);}
+  assert.match(e.landingFeedback,/越晃/);
+  const unstable=e.instability;
+  next(e);land(e,'study');
+  assert.match(e.landingFeedback,/回稳/);
+  e.togglePause();const paused=e.sway;e.update(4);approx(e.sway,paused);e.togglePause();
+  for(let i=0;i<4;i++){next(e);land(e,'study');}
+  assert.ok(e.instability<unstable*.1);
+});
+test('high tower framing keeps six floors visible with room for the suspended brick',()=>{
+  for(const height of [720,760,950]){
+    const e=new GameEngine(5,'fixed');e.setViewport(height);
+    for(let i=0;i<10;i++){land(e,'study');next(e);}
+    const roof=e.topY+e.groundScreen+e.cameraY;
+    assert.ok((height/e.viewZoom-roof)/RULES.height>=5.9);
+    assert.ok(roof-(e.currentY+e.groundScreen+e.cameraY+RULES.height)>50);
+  }
+});
 test('contact boundaries: exact 6%, 12%, 50%, and first outside pixel',()=>{assert.equal(judge(5.28,'study'),'PERFECT');assert.equal(judge(5.2801,'study'),'SUCCESS');assert.equal(judge(10.56,'volunteer'),'PERFECT');assert.equal(judge(10.5601,'volunteer'),'SUCCESS');assert.equal(judge(-44,'study'),'SUCCESS');assert.equal(judge(44.001,'study'),'MISS');});
 test('difficulty uses the specified equation and rollback clamp',()=>{approx(difficulty(15).omega,1.2+2.6*(1-Math.exp(-15/18)));assert.equal(difficulty(35).angle,48);assert.deepEqual(difficulty(12,6),difficulty(6));assert.deepEqual(difficulty(2,60),difficulty(1));assert.ok(difficulty(1000).omega<=3.8);});
 test('base weights sum to one and keep courses available at every stage',()=>{

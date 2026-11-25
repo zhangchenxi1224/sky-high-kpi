@@ -8,6 +8,16 @@ import {usePreferences} from '../store';
 const query=new URLSearchParams(location.search);
 const initialSeed=Number(query.get('seed'))||Date.now()>>>0;
 const mode=query.get('mode')==='fixed'?'fixed':'normal';
+const swayDemo=mode==='fixed'&&query.get('demo')==='sway';
+function demoDropReady(game:GameEngine){
+  const offset=game.currentX-game.topX;
+  const step=game.floor%12;
+  if(swayDemo&&step>=2&&step<7){
+    const directed=offset*(game.floor%2===0?-1:1);
+    return directed>=32&&directed<=41;
+  }
+  return Math.abs(offset)<2.5;
+}
 const fmt=(n:number)=>Number(n.toFixed(2)).toString();
 function Cap(){return <svg className="cap" viewBox="0 0 36 28" aria-hidden="true"><path fill="#b58b46" d="M8 14h21v9l-11 5-10-5z"/><path fill="#ffe4a4" d="M1 9 18 1 35 9v4L18 21 1 13z"/><path fill="#d7ad62" d="m1 13 17 8 17-8v-4l-17 8L1 9z"/><path stroke="#fce3a4" strokeWidth="2" d="M31 14v10"/></svg>}
 function StatGrid({s}:{s:Snapshot}){return <div className="stat-grid"><div><span>绩点 GPA</span><b>{s.kpi.gpa.toFixed(2)}<small> / 4.00</small></b></div><div><span>科研成果</span><b>{fmt(s.kpi.research)}</b></div><div><span>竞赛积分</span><b>{fmt(s.kpi.competition)}</b></div><div><span>志愿时长</span><b>{fmt(s.kpi.volunteer)}<small> h</small></b></div><div><span>社会实践</span><b>{fmt(s.kpi.practice)}</b></div><div><span>最高连击</span><b>{s.maxCombo}<small> COMBO</small></b></div></div>}
@@ -48,7 +58,7 @@ export function App(){
     const e=engine.current;const r=new Renderer(canvas.current!);renderer.current=r;attach(e);
     const resize=()=>r.resize(innerWidth,innerHeight,engine.current);resize();window.addEventListener('resize',resize);
     let raf=0,previous=performance.now(),lastHud=0,frameCount=0,fpsTime=previous;
-    const tick=(now:number)=>{const delta=Math.min(.1,(now-previous)/1000);previous=now;frameCount++;if(now-fpsTime>=1000){setFps(Math.round(frameCount*1000/(now-fpsTime)));fpsTime=now;frameCount=0;}const game=engine.current;game.update(delta);if(autoRef.current&&game.mode==='fixed'&&!game.paused&&game.phase==='SWINGING'&&Math.abs(game.currentX-game.topX)<2.5)game.drop();r.render(game);if(now-lastHud>60){setS(game.snapshot());lastHud=now;}if(r.sprites.length===12)setAssetReady(true);raf=requestAnimationFrame(tick);};raf=requestAnimationFrame(tick);
+    const tick=(now:number)=>{const delta=Math.min(.1,(now-previous)/1000);previous=now;frameCount++;if(now-fpsTime>=1000){setFps(Math.round(frameCount*1000/(now-fpsTime)));fpsTime=now;frameCount=0;}const game=engine.current;game.update(delta);if(autoRef.current&&game.mode==='fixed'&&!game.paused&&game.phase==='SWINGING'&&demoDropReady(game))game.drop();r.render(game);if(now-lastHud>60){setS(game.snapshot());lastHud=now;}if(r.sprites.length===12)setAssetReady(true);raf=requestAnimationFrame(tick);};raf=requestAnimationFrame(tick);
     const hidden=()=>{if(document.hidden){if(engine.current.phase!=='READY'&&!engine.current.finished)engine.current.paused=true;sound.current.paused=true;refresh();}};document.addEventListener('visibilitychange',hidden);
     const key=(event:KeyboardEvent)=>{
       if(event.repeat)return;
@@ -84,7 +94,7 @@ export function App(){
       <button className={`pixel-button blue ${prefs.effects?'':'muted'}`} aria-pressed={prefs.effects} onClick={()=>prefs.toggle('effects')}><span>✦</span> 特效{prefs.effects?'':' ×'}</button>
       <button className="pixel-button green" onClick={()=>openPanel('campus')}><span>▥</span> 校区</button>
     </nav>
-    {mode==='fixed'&&!s.finished&&<><button className="demo-button" aria-pressed={auto} onClick={()=>{autoRef.current=!autoRef.current;setAuto(autoRef.current);if(preview)engine.current.start();refresh();}}>{auto?'关闭自动演示':'自动演示全部砖块'}</button><output className="fps-readout">{fps} FPS · DPR {Number(Math.min(devicePixelRatio,2).toFixed(2))}</output></>}
+    {mode==='fixed'&&!s.finished&&<><button className="demo-button" aria-pressed={auto} onClick={()=>{autoRef.current=!autoRef.current;setAuto(autoRef.current);if(preview)engine.current.start();refresh();}}>{auto?'关闭自动演示':swayDemo?'演示搭偏与回稳':'自动演示全部砖块'}</button><output className="fps-readout">{fps} FPS · DPR {Number(Math.min(devicePixelRatio,2).toFixed(2))}</output></>}
     {preview&&<section className="welcome" aria-label="开始游戏">
       <div className="welcome-copy"><div className="eyebrow">ONE CLICK. SKY HIGH.</div><h1>绩点卷上天</h1><p>把大学，叠成天空的形状。</p>
       <div className="intro-tags"><span>一键松钩</span><i>✦</i><span>单命挑战</span><i>✦</i><span>无尽高空</span></div></div>
