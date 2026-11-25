@@ -8,3 +8,8 @@
 .fps-readout{position:absolute;left:17px;top:149px;font:10px monospace;color:#e8eeff;pointer-events:none}
 @media(min-width:401px) and (max-width:600px){.bottom-actions{bottom:max(25px,calc(env(safe-area-inset-bottom) + 18px))}.bottom-actions:has(.skip){left:calc(50% - 35px)}}@media(max-width:400px){.bottom-actions{bottom:max(24px,calc(env(safe-area-inset-bottom) + 18px))}.bottom-actions:has(.skip){bottom:72px}}
 .game-shell:has(.demo-button) .buffs{top:177px}
+.welcome{top:50%;translate:-50% -50%}
+.welcome-copy,.welcome-links{position:absolute;left:0;right:0}
+.welcome-copy{bottom:100%;padding-bottom:clamp(10px,2vh,20px)}
+.welcome-links{top:100%}
+.top-controls .pause-control{min-height:44px}

@@ -31,7 +31,13 @@ export class Renderer {
       else if(!e.finished){const hx=center+e.anchorX+Math.sin(e.phaseAngle)*10;this.rope(center+e.anchorX,-48,hx,105);}
       if(e.current){const x=center+e.currentX,y=e.currentY+e.groundScreen+e.cameraY;
         c.save();c.translate(x,y+44);if(e.phase==='GAME_OVER')c.rotate(e.rotation);this.room(e.current.sprite,0,-44);c.restore();
-        if(e.phase==='SWINGING'){const labelX=x+58;this.label(e.current.name,labelX,y+37,'#fff4da');}
+        if(e.phase==='SWINGING'){
+          this.label(e.current.name,x+58,y+37,'#fff4da');
+          if(e.coffeeRemaining>0){
+            const seconds=(Math.ceil(e.coffeeRemaining*10)/10).toFixed(1);
+            this.label(`☕ 减速 45% · ${seconds}s`,x,y+108,'#c6efed',true);
+          }
+        }
       }
     }
     const age=e.time-e.lastLandTime;

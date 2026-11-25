@@ -8,18 +8,34 @@ function land(e:GameEngine,id:string,delta=0){if(e.phase==='READY')e.start();e.c
 function next(e:GameEngine){e.update(.5);assert.equal(e.phase,'SWINGING');}
 test('contact boundaries: exact 6%, 12%, 50%, and first outside pixel',()=>{assert.equal(judge(5.28,'study'),'PERFECT');assert.equal(judge(5.2801,'study'),'SUCCESS');assert.equal(judge(10.56,'volunteer'),'PERFECT');assert.equal(judge(10.5601,'volunteer'),'SUCCESS');assert.equal(judge(-44,'study'),'SUCCESS');assert.equal(judge(44.001,'study'),'MISS');});
 test('difficulty uses the specified equation and rollback clamp',()=>{approx(difficulty(15).omega,1.2+2.6*(1-Math.exp(-15/18)));assert.equal(difficulty(35).angle,48);assert.deepEqual(difficulty(12,6),difficulty(6));assert.deepEqual(difficulty(2,60),difficulty(1));assert.ok(difficulty(1000).omega<=3.8);});
-test('weights sum to one for every layer and tutorial excludes advanced categories',()=>{for(let n=1;n<200;n++)approx(weights(n).reduce((a,b)=>a+b),1);assert.deepEqual(weights(1),[.5,.3,.2,0,0,0]);approx(weights(24)[3],.3);});
+test('base weights sum to one and keep courses available at every stage',()=>{
+  for(let n=1;n<200;n++)approx(weights(n).reduce((a,b)=>a+b),1);
+  assert.deepEqual(weights(1),[.6,.25,.15,0,0,0]);
+  approx(weights(4)[0],.5);
+  approx(weights(14)[0],.425);
+  approx(weights(24)[0],.35);
+});
 test('fixed seeds reproduce natural draw streams',()=>{const a=seeded(42),b=seeded(42);for(let n=1;n<300;n++)assert.deepEqual(drawBlock(n,a,false,false),drawBlock(n,b,false,false));});
-test('high pressure offers 30% direct temptation when absent in four draws',()=>{const random=()=>.2;assert.equal(drawBlock(25,random,true,false).kind,'temptation');assert.notEqual(drawBlock(25,random,true,true).kind,'temptation');});
-test('remaining 70% of high-pressure draws cannot double count temptation',()=>{assert.notEqual(drawBlock(25,()=>.99,true,false).kind,'temptation');const r=seeded(823);let tempt=0;for(let i=0;i<10000;i++)if(drawBlock(25,r,true,false).kind==='temptation')tempt++;assert.ok(tempt>2850&&tempt<3150);});
+test('high pressure offers 20% direct temptation when absent in four draws',()=>{const random=()=>.19;assert.equal(drawBlock(25,random,true,false).kind,'temptation');assert.notEqual(drawBlock(25,random,true,true).kind,'temptation');});
+test('remaining 80% of high-pressure draws cannot double count temptation',()=>{assert.notEqual(drawBlock(25,()=>.99,true,false).kind,'temptation');const r=seeded(823);let tempt=0;for(let i=0;i<10000;i++)if(drawBlock(25,r,true,false).kind==='temptation')tempt++;assert.ok(tempt>1850&&tempt<2150);});
 test('GPA clamps and negative temptation is never multiplied',()=>{const k={...emptyKpi(),gpa:3.99};assert.equal(reward(k,block('major'),true,10,true).kpi.gpa,4);assert.equal(reward(k,block('tempt_hok'),true,10,true).kpi.gpa,3.84);assert.equal(reward(emptyKpi(),block('tempt_hok'),true,10,true).kpi.gpa,0);});
 test('score matches five-dimensional formula and competition raw units',()=>{assert.equal(score(10,{gpa:1.5,research:2,competition:5,volunteer:4,practice:3}),465);});
 test('research imperfect half value and perfect positive multiplier',()=>{assert.equal(reward(emptyKpi(),block('research'),false,0,false).kpi.research,1);assert.equal(reward(emptyKpi(),block('research'),true,1,false).kpi.research,2.2);});
+test('practice feedback attributes only the extra KPI actually credited',()=>{
+  const gain=(id:string,gpa=0,perfect=false)=>reward({...emptyKpi(),gpa},block(id),perfect,2,true).label;
+  assert.equal(gain('volunteer'),'志愿 +5h（实践多赚 1h）');
+  assert.equal(gain('research'),'科研 +1.25（实践多赚 0.25）');
+  assert.equal(gain('competition',0,true),'竞赛 +7.5（实践多赚 1.5）');
+  assert.equal(gain('study',3.8),'GPA +0.2（实践多赚 0.02）');
+  assert.doesNotMatch(gain('study',4),/多赚/);
+  assert.doesNotMatch(gain('coffee'),/多赚/);
+  assert.doesNotMatch(gain('tempt_hok',1),/多赚/);
+});
 test('every category has identical vertical free fall',()=>{const positions:number[]=[];for(const b of catalog){const e=new GameEngine(1);e.start();e.current=b;e.currentX=0;e.currentY=-500;e.drop();e.update(.2);positions.push(e.currentY);}positions.forEach(y=>approx(y,positions[0]));approx(positions[0],-472);});
 test('DDL warns at 2 seconds, forces exactly at 8, freezes on pause',()=>{const e=new GameEngine(1);let warning=0;e.on(v=>{if(v.type==='warning')warning++;});e.start();e.update(5.99);assert.equal(warning,0);e.update(.03);assert.equal(warning,1);e.paused=true;const ddl=e.ddl;e.update(10);approx(e.ddl,ddl);e.paused=false;e.update(1.97);assert.equal(e.phase,'SWINGING');e.update(.03);assert.equal(e.phase,'DROPPING');assert.equal(e.forced,true);});
 test('one MISS ends the run without points, floors, or ghost rewards',()=>{const e=new GameEngine(2);e.start();e.currentX=45;e.currentY=-89;e.drop();e.update(.05);assert.equal(e.phase,'GAME_OVER');assert.equal(e.floor,0);assert.equal(score(e.floor,e.kpi),0);assert.equal(e.drop(),false);e.update(1);assert.equal(e.finished,true);});
 test('successful offset stays real; PERFECT only corrects two pixels',()=>{const e=new GameEngine(3);land(e,'study',20);assert.equal(e.topX,20);next(e);land(e,'study',4);assert.equal(e.topX,22);});
-test('course grants two combo levels, success resets streak',()=>{const e=new GameEngine(3);land(e,'study');assert.equal(e.combo,2);assert.equal(e.kpi.gpa,.12);next(e);land(e,'volunteer');assert.equal(e.combo,3);next(e);land(e,'research',25);assert.equal(e.combo,0);});
+test('course grants two combo levels, success resets streak',()=>{const e=new GameEngine(3);land(e,'study');assert.equal(e.combo,2);approx(e.kpi.gpa,.216);next(e);land(e,'volunteer');assert.equal(e.combo,3);next(e);land(e,'research',25);assert.equal(e.combo,0);});
 test('research speed buff affects exactly the next block',()=>{const e=new GameEngine(3);land(e,'research');next(e);approx(e.speedMultiplier,1.12);land(e,'study');next(e);approx(e.speedMultiplier,1);});
 test('competition sway penalty only above 25% and lasts one draw',()=>{const e=new GameEngine(3);land(e,'competition',23);next(e);approx(e.angleMultiplier,1.15);land(e,'study');next(e);approx(e.angleMultiplier,1);});
 test('practice bonus lasts next two settled blocks',()=>{const e=new GameEngine(3);land(e,'practice',20);assert.equal(e.practiceLeft,2);next(e);land(e,'volunteer',20);assert.equal(e.kpi.volunteer,5);assert.equal(e.practiceLeft,1);next(e);land(e,'volunteer',20);assert.equal(e.kpi.volunteer,10);assert.equal(e.practiceLeft,0);next(e);land(e,'volunteer',20);assert.equal(e.kpi.volunteer,14);});

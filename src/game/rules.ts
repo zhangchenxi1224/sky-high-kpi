@@ -9,12 +9,12 @@ export const round=(v:number)=>Math.round((v+Number.EPSILON)*10000)/10000;
 export const score=(floor:number,k:KPI)=>Math.round(floor*10+k.gpa*100+k.research*30+k.competition*15+k.volunteer*5+k.practice*20);
 export const difficulty=(n:number,rollback=0)=>{const effective=Math.max(1,n-rollback);return {effective,omega:1.2+2.6*(1-Math.exp(-effective/18)),angle:Math.min(48,18+effective*1.1)};};
 export const judge=(delta:number,kind:Kind)=>Math.abs(delta)<=RULES.width*(kind==='volunteer'?.12:.06)+1e-9?'PERFECT':Math.abs(delta)<=RULES.width*.5+1e-9?'SUCCESS':'MISS';
-export const weights=(n:number)=>{const p=clamp((n-4)/20,0,1);return n<4?[.5,.3,.2,0,0,0]:[.4-.25*p,.25-.15*p,.2-.1*p,.05+.25*p,.05+.2*p,.05+.05*p];};
+export const weights=(n:number)=>{const p=clamp((n-4)/20,0,1);return n<4?[.6,.25,.15,0,0,0]:[.5-.15*p,.2-.08*p,.15-.05*p,.05+.13*p,.05+.1*p,.05+.05*p];};
 export const seeded=(seed:number)=>()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};
 export const catalog:Block[]=[
-  {id:'study',kind:'study',name:'高数',sprite:0,value:.10},
-  {id:'linear',kind:'study',name:'线性代数',sprite:0,value:.15},
-  {id:'major',kind:'study',name:'核心专业课',sprite:0,value:.20},
+  {id:'study',kind:'study',name:'高数',sprite:0,value:.18},
+  {id:'linear',kind:'study',name:'线性代数',sprite:0,value:.23},
+  {id:'major',kind:'study',name:'核心专业课',sprite:0,value:.28},
   {id:'research',kind:'research',name:'论文室',sprite:1,value:2},
   {id:'research_ddl',kind:'research',name:'顶会 DDL',sprite:1,value:3},
   {id:'research_code',kind:'research',name:'老艺术家手搓代码',sprite:1,value:1},
@@ -32,7 +32,7 @@ export const catalog:Block[]=[
 export function drawBlock(n:number,random:()=>number,highPressure:boolean,recentTemptation:boolean):Block {
   const pick=(list:Block[])=>({...list[Math.min(list.length-1,Math.floor(random()*list.length))]});
   const boosted=highPressure&&!recentTemptation;
-  if(boosted&&random()<.3)return pick(catalog.filter(b=>b.kind==='temptation'));
+  if(boosted&&random()<.2)return pick(catalog.filter(b=>b.kind==='temptation'));
   const kinds:Kind[]=['study','volunteer','practice','research','competition','coffee'];
   let roll=random();const w=weights(n);let kind:Kind='study';
   for(let i=0;i<w.length;i++){roll-=w[i];if(roll<=0){kind=kinds[i];break;}}
@@ -40,17 +40,30 @@ export function drawBlock(n:number,random:()=>number,highPressure:boolean,recent
   return pick(catalog.filter(b=>b.kind===kind));
 }
 export function reward(kpi:KPI,block:Block,perfect:boolean,combo:number,practiceBuff:boolean):{kpi:KPI;label:string;multiplier:number}{
-  const k={...kpi},multiplier=(perfect?1+Math.min(combo,10)*.1:1)*(practiceBuff?1.25:1);
-  const v=round(block.value*multiplier);let label='';
-  switch(block.kind){
-    case 'study': case 'notes': k.gpa=clamp(round(k.gpa+v),0,4);label=`GPA +${v.toFixed(2)}`;break;
-    case 'research':{const gain=perfect?v:v*.5;k.research=round(k.research+gain);label=`科研 +${round(gain)}`;break;}
-    case 'competition': k.competition=round(k.competition+v);label=`竞赛 +${v}`;break;
-    case 'volunteer': k.volunteer=round(k.volunteer+v);label=`志愿 +${v}h`;break;
-    case 'practice': k.practice=round(k.practice+v);label=`实践 +${v}`;break;
-    case 'coffee':label='续命冰美式';break;
-    case 'temptation':k.gpa=Math.max(0,round(k.gpa-.15));label='GPA −0.15';break;
+  const k={...kpi};
+  const comboMultiplier=perfect?1+Math.min(combo,10)*.1:1;
+  const multiplier=comboMultiplier*(practiceBuff?1.25:1);
+  if(block.kind==='coffee')return {kpi:k,label:'冰美式 · 减速 5 秒',multiplier};
+  if(block.kind==='temptation'){
+    k.gpa=Math.max(0,round(k.gpa-.15));
+    return {kpi:k,label:'GPA −0.15',multiplier};
   }
+
+  const stat=block.kind==='study'||block.kind==='notes'?'gpa':block.kind;
+  const names={gpa:'GPA',research:'科研',competition:'竞赛',volunteer:'志愿',practice:'实践'};
+  const unit=stat==='volunteer'?'h':'';
+  const balanceAfter=(factor:number)=>{
+    const value=round(block.value*factor);
+    const gain=stat==='research'&&!perfect?value*.5:value;
+    const balance=round(kpi[stat]+gain);
+    return stat==='gpa'?clamp(balance,0,4):balance;
+  };
+  k[stat]=balanceAfter(multiplier);
+  const credited=round(k[stat]-kpi[stat]);
+  const extra=practiceBuff?round(k[stat]-balanceAfter(comboMultiplier)):0;
+  const amount=stat==='gpa'&&!extra?credited.toFixed(2):String(credited);
+  let label=`${names[stat]} +${amount}${unit}`;
+  if(extra>0)label+=`（实践多赚 ${extra}${unit}）`;
   return {kpi:k,label,multiplier};
 }
 export type TitleStats={floor:number;kpi:KPI;accepted:number;maxSkipStreak:number;maxCombo:number;researchImperfect:number;counts:Partial<Record<Kind,number>>};

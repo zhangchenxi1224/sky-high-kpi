@@ -21,7 +21,8 @@ export class GameEngine {
   setViewport(height:number){this.viewHeight=height;this.groundScreen=height-100;this.hangingScreen=Math.max(126,height*.23);this.ropeLength=this.hangingScreen+24;}
   get topX(){return this.tower.at(-1)?.x??0;}
   get topY(){return -this.floor*RULES.height;}
-  get params(){const d=difficulty(this.floor+1,this.rollback);return {...d,omega:d.omega*this.speedMultiplier*(this.time<this.coffeeUntil?.55:1),angle:d.angle*this.angleMultiplier};}
+  get coffeeRemaining(){return Math.max(0,this.coffeeUntil-this.time);}
+  get params(){const d=difficulty(this.floor+1,this.rollback);return {...d,omega:d.omega*this.speedMultiplier*(this.coffeeRemaining>0?.55:1),angle:d.angle*this.angleMultiplier};}
   start(){if(this.phase!=='READY')return false;this.emit({type:'start'});this.spawn();return true;}
   spawn(){
     this.speedMultiplier=this.speedNext;this.speedNext=1;
@@ -72,7 +73,7 @@ export class GameEngine {
       case 'research':this.speedNext=1.12;if(!perfect)this.researchImperfect++;this.say('导师加活！下一块摆速 +12%');break;
       case 'competition':if(Math.abs(delta)>RULES.width*.25){this.angleNext=1.15;this.say('熬夜赶 PPT！下一块摆幅 +15%');}break;
       case 'practice':this.practiceLeft=2;this.say('实践加成 · 后两块正向综测 +25%');break;
-      case 'coffee':this.coffeeUntil=this.time+5;this.say('冰美式续上了！5 秒内吊车摆速降低 45%');break;
+      case 'coffee':this.coffeeUntil=this.time+5;break;
       case 'notes':this.notesLeft=3;this.say('这本秘籍真有用！后三投摆幅收窄 30%');break;
       case 'temptation':this.accepted++;this.skipStreak=0;this.rollback+=6;this.say(memes.temptationSkins.find(s=>s.id===block.id)!.acceptDanmaku+' · 难度回退 6 层');break;
     }
@@ -85,7 +86,11 @@ export class GameEngine {
     this.emit({type:'land',text:r.label,perfect,combo:this.combo});
   }
   snapshot():Snapshot {
-    const buffs:string[]=[];if(this.time<this.coffeeUntil)buffs.push(`冰美式 ${(this.coffeeUntil-this.time).toFixed(1)}s`);if(this.notesLeft>0||this.angleMultiplier<1)buffs.push('秘籍 · 摆幅 −30%');if(this.practiceLeft>0)buffs.push(`实践加成 ×${this.practiceLeft}`);if(this.speedMultiplier>1)buffs.push('导师加活 +12%');if(this.angleMultiplier>1)buffs.push('PPT 手抖 +15%');
+    const buffs:string[]=[];
+    if(this.notesLeft>0||this.angleMultiplier<1)buffs.push('秘籍 · 摆幅 −30%');
+    if(this.practiceLeft>0)buffs.push(`实践 +25% · 剩 ${this.practiceLeft} 块`);
+    if(this.speedMultiplier>1)buffs.push('导师加活 +12%');
+    if(this.angleMultiplier>1)buffs.push('PPT 手抖 +15%');
     return {phase:this.phase,floor:this.floor,kpi:{...this.kpi},score:score(this.floor,this.kpi),ddl:this.ddl,current:this.current,combo:this.combo,maxCombo:this.maxCombo,perfects:this.perfects,accepted:this.accepted,skipped:this.skipped,maxSkipStreak:this.maxSkipStreak,researchImperfect:this.researchImperfect,counts:{...this.counts},paused:this.paused,finished:this.finished,forced:this.forced,rollback:this.rollback,buffs,message:this.message,messageUntil:this.messageUntil,rewardLabel:this.rewardLabel,verdict:this.verdict,seed:this.seed,mode:this.mode,elapsed:this.time};
   }
 }
