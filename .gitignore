@@ -7,3 +7,10 @@ playwright-report/
 .sites-local/
 *.tsbuildinfo
 qa/
+.env
+.env.*
+!.env.example
+*.zip
+*.tar.gz
+.DS_Store
+Thumbs.db
