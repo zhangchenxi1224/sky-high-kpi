@@ -73,6 +73,12 @@ test('resisting consecutive temptation offers survives intervening regular block
 test('fixed scenario contains all 12 room sprites and five temptation skins',()=>{const e=new GameEngine(3,'fixed');e.start();const seen:number[]=[];for(let i=0;i<FIXED_SEQUENCE.length;i++){seen.push(e.current!.sprite);land(e,e.current!.id);next(e);}assert.equal(new Set(seen).size,12);});
 test('100 floors continue without graduation modal or cropped width',()=>{const e=new GameEngine(3,'fixed');for(let i=0;i<100;i++){land(e,'study');next(e);}assert.equal(e.floor,100);assert.equal(e.phase,'SWINGING');assert.equal(e.kpi.gpa,4);assert.equal(e.tower.length,100);});
 test('title priority prefers accepted temptation even with champion metrics',()=>{const s={floor:35,kpi:{...emptyKpi(),gpa:4},accepted:3,maxSkipStreak:0,maxCombo:10,researchImperfect:0,counts:{}};assert.equal(getTitle(s).rule,'temptation');assert.equal(getTitle({...s,accepted:0}).rule,'champion');});
+test('exact 1103 score unlocks the Chen Ze easter egg above every other title',()=>{
+  const kpi={gpa:4,research:10,competition:10,volunteer:10.6,practice:5};
+  assert.equal(score(10,kpi),1103);
+  const s={floor:10,kpi,accepted:3,maxSkipStreak:3,maxCombo:12,researchImperfect:2,counts:{study:10,research:10}};
+  assert.equal(getTitle(s).rule,'chenze1103');
+});
 test('social profiles classify normalized KPI balance',()=>{
   assert.equal(socialMetrics({...emptyKpi(),gpa:4,research:15}).id,'introvert');
   assert.equal(socialMetrics({...emptyKpi(),competition:30,volunteer:30,practice:15}).id,'extrovert');

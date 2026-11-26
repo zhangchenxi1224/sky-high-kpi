@@ -1,5 +1,5 @@
 import memes from '../config/memePack.json';
-export const RULES = {version:'2026.11.3', width:88, height:88, gravity:1400, ddl:6, perfect:.06, volunteerPerfect:.12, omegaMin:1.2,omegaMax:3.8,towerSway:true};
+export const RULES = {version:'2026.11.4', width:88, height:88, gravity:1400, ddl:6, perfect:.06, volunteerPerfect:.12, omegaMin:1.2,omegaMax:3.8,towerSway:true};
 export type Kind = 'study'|'research'|'competition'|'volunteer'|'practice'|'coffee'|'notes'|'temptation';
 export type KPI = {gpa:number;research:number;competition:number;volunteer:number;practice:number};
 export type Block = {id:string;kind:Kind;name:string;sprite:number;value:number};
@@ -88,7 +88,8 @@ export function getTitle(s:TitleStats){
   const allRounder=s.floor>=25&&[nGpa,nResearch,nCompetition,nVolunteer,nPractice].every(v=>v>=.55);
   const projectStar=s.floor>=15&&social.social>=.62&&(nCompetition+nPractice)/2>=.55;
   const libraryHermit=s.floor>=15&&social.academic>=.65&&social.id==='introvert';
-  const rule=s.accepted>=3?'temptation':s.maxSkipStreak>=3&&s.floor>20?'resist':comeback?'comeback':s.floor>=30&&k.gpa>=3.8?'champion':allRounder?'allRounder':projectStar?'projectStar':volunteerValue>Math.max(k.gpa*100,k.research*30,k.competition*15)&&s.maxCombo>=3?'volunteer':(s.counts.research??0)>=Math.max(1,...Object.values(s.counts))&&s.researchImperfect>=2?'research':libraryHermit?'libraryHermit':s.floor<=5?'early':'default';
+  const exactScore=score(s.floor,k);
+  const rule=exactScore===1103?'chenze1103':s.accepted>=3?'temptation':s.maxSkipStreak>=3&&s.floor>20?'resist':comeback?'comeback':s.floor>=30&&k.gpa>=3.8?'champion':allRounder?'allRounder':projectStar?'projectStar':volunteerValue>Math.max(k.gpa*100,k.research*30,k.competition*15)&&s.maxCombo>=3?'volunteer':(s.counts.research??0)>=Math.max(1,...Object.values(s.counts))&&s.researchImperfect>=2?'research':libraryHermit?'libraryHermit':s.floor<=5?'early':'default';
   return memes.titles.find(t=>t.rule===rule)!;
 }
 export const FIXED_SEQUENCE=['study','volunteer','practice','research','competition','coffee','notes',...memes.temptationSkins.map(s=>s.id)];
