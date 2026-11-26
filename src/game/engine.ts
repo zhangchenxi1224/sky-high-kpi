@@ -9,7 +9,7 @@ export class GameEngine {
   phase:Phase='READY';floor=0;kpi=emptyKpi();combo=0;maxCombo=0;perfects=0;accepted=0;skipped=0;skipStreak=0;maxSkipStreak=0;researchImperfect=0;counts:Partial<Record<Kind,number>>={};
   tower:Placed[]=[];current:Block|null=null;currentX=0;currentY=0;velocity=0;rotation=0;phaseAngle=-.65;hookAngle=0;hookX=0;hookY=0;anchorX=0;
   cameraY=0;cameraX=0;cameraFromY=0;cameraFromX=0;cameraTime=0;groundScreen=620;hangingScreen=170;viewHeight=720;ropeLength=190;
-  time=0;phaseTime=0;ddl=8;paused=false;finished=false;forced=false;warningPlayed=false;rollback=0;
+  time=0;phaseTime=0;ddl=RULES.ddl;paused=false;finished=false;forced=false;warningPlayed=false;rollback=0;
   instability=0;sway=0;private swayVelocity=0;landingFeedback='';
   speedNext=1;angleNext=1;speedMultiplier=1;angleMultiplier=1;practiceLeft=0;notesLeft=0;coffeeUntil=0;
   message='';messageUntil=0;rewardLabel='';verdict='';lastLandTime=-5;drawHistory:Kind[]=[];drawIndex=0;

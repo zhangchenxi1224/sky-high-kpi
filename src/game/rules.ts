@@ -1,5 +1,5 @@
 import memes from '../config/memePack.json';
-export const RULES = {version:'2026.11.1', width:88, height:88, gravity:1400, ddl:8, perfect:.06, volunteerPerfect:.12, omegaMin:1.2,omegaMax:3.8,towerSway:true};
+export const RULES = {version:'2026.11.2', width:88, height:88, gravity:1400, ddl:6, perfect:.06, volunteerPerfect:.12, omegaMin:1.2,omegaMax:3.8,towerSway:true};
 export type Kind = 'study'|'research'|'competition'|'volunteer'|'practice'|'coffee'|'notes'|'temptation';
 export type KPI = {gpa:number;research:number;competition:number;volunteer:number;practice:number};
 export type Block = {id:string;kind:Kind;name:string;sprite:number;value:number};
