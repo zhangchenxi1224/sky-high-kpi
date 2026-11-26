@@ -1,5 +1,5 @@
 {
-  "version": "2026.11-campus",
+  "version": "2026.11.4-chenze",
   "temptationSkins": [
     {"id":"tempt_hongguo","name":"先看两集红果","sprite":7,"primaryColor":"#d95e54","acceptDanmaku":"贵是贵了点，但看了不烧心！","skipDanmaku":"退！别给我看霸总重生！"},
     {"id":"tempt_kangshen","name":"康神开播了","sprite":8,"primaryColor":"#ec8baa","acceptDanmaku":"瓦场悟道，绩点算什么？","skipDanmaku":"忍住！等保研了再看回放！"},
@@ -8,19 +8,30 @@
     {"id":"tempt_selflove","name":"爱你老己","sprite":11,"primaryColor":"#edb55c","acceptDanmaku":"爱你老己，明天见！","skipDanmaku":"老己对不起，今天还得卷！"}
   ],
   "danmakuBank": {
-    "perfectStreak3":["夯爆了！","助我破鼎！","此人的手速恐怕在我之上","老师海底捞稳了"],
-    "highAltitude":["中国人能飞！","已卷出大气层，活人感归零","满绩基础，不掉发就不基础"],
-    "narrowSuccess":["如何呢，又能怎","已老实，求放过","60分万岁，多一分浪费","主打一个邪修过关"],
-    "extremeSpeed":["你已急哭","手抖得像早八没喝冰美式","谁把吊车开成电风扇了？"],
-    "gameOver":["不讲不讲，退学重开！","我将全职在家研究堆箱子","爱你老己，下把再来"]
+    "perfectStreak3":["夯爆了！","助我破鼎！","此人的手速恐怕在我之上","老师海底捞稳了","神之六秒","胆子真是肥嘟嘟的","这波不烧心","低山臭水遇知音"],
+    "highAltitude":["中国人能飞！","已卷出大气层，活人感归零","满绩基础，不掉发就不基础","地球 Online，强制登录无法退服","我见识到我自己的厉害了","神之六秒，直接封顶"],
+    "narrowSuccess":["如何呢，又能怎","已老实，求放过","60分万岁，多一分浪费","主打一个邪修过关","那咋了，受着呗","不知道，我的身材很曼妙","算了嘛警官","慌啥子嘛，慢慢来"],
+    "extremeSpeed":["你已急哭","手抖得像早八没喝冰美式","谁把吊车开成电风扇了？","胆子真是肥嘟嘟的","慌啥子嘛，吊车还在加速"],
+    "gameOver":["不讲不讲，退学重开！","我将辞职专心研究这一局","爱你老己，下把再来","算了嘛警官，放我一马","那咋了，受着呗","地球 Online 又卡 BUG 了"]
   },
   "titles": [
-    {"rule":"temptation","name":"赛博奶头乐首席鉴赏官","comment":"红果看了八十集，直播一场没落。如何呢，又能怎？","stamp":"爱你老己"},
-    {"rule":"resist","name":"无情预制卷王","comment":"康神开播不动心，跑刀喊你你不去，建议查查活人感。","stamp":"我要验牌"},
-    {"rule":"volunteer","name":"综测航天基地跑刀鼠鼠","comment":"专摸高性价比综测大红，已携满包时长安全撤离。","stamp":"千万撤离"},
-    {"rule":"research","name":"纯手搓老艺术家","comment":"坚持纯手搓，结果被查重判了 92% AIGC。","stamp":"大修退回"},
-    {"rule":"champion","name":"瓦场悟道 · 破鼎战神","comment":"满绩基础，冲出大气层就不基础，中国人能飞！","stamp":"夯爆了"},
-    {"rule":"early","name":"早八即休学大师","comment":"不讲不讲，我将全职在家研究为什么这一块就歪了。","stamp":"已老实"},
-    {"rule":"default","name":"校园天际线建筑师","comment":"一层一层，把普通的一天叠成了不普通的风景。","stamp":"未来可期"}
+    {"rule":"chenze1103","name":"1103号编外老铁","comment":"成功之路步履蹒跚，举旗呐喊1103；分数卡在1103，编外老铁也能站上峡谷之巅。泽哥看了都得说一句：行了老铁，进来坐。","stamp":"峡谷之巅"},
+    {"rule":"temptation","name":"赛博奶头乐首席鉴赏官","comment":"三次接住红果、直播和跑刀，GPA 被啃掉 0.45，快乐倒是很稳定。","stamp":"再看一集"},
+    {"rule":"resist","name":"无情预制卷王","comment":"康神开播先验牌，跑刀喊你先拒绝；三次忍住诱惑，20 层后还在硬扛。","stamp":"我要验牌"},
+    {"rule":"volunteer","name":"综测航天基地跑刀鼠鼠","comment":"志愿与实践折算占优，带着时长和红章安全撤离，主打高性价比综测。","stamp":"千万撤离"},
+    {"rule":"research","name":"纯手搓老艺术家","comment":"科研砖最多却频繁没落正；不是不会写，是被查重判了 92% AIGC。","stamp":"大修退回"},
+    {"rule":"champion","name":"瓦场悟道 · 破鼎战神","comment":"30 层以上、GPA 3.80 以上；绩点基础，瓦场悟道就不基础。","stamp":"夯爆了"},
+    {"rule":"comeback","name":"校园萧炎","comment":"绩点暂时没起飞，竞赛和实践已经开始冒火；三十年河东，三十年河西，莫欺少年穷。","stamp":"莫欺少年穷"},
+    {"rule":"allRounder","name":"六边形校园战神","comment":"绩点、科研、竞赛、志愿、实践五项全开，老师看了沉默，同学看了转发。","stamp":"样样都行"},
+    {"rule":"projectStar","name":"项目组永动机","comment":"PPT 能改到凌晨，赞助能谈到宿舍，群聊永远第一个回“收到”。","stamp":"群聊置顶"},
+    {"rule":"libraryHermit","name":"图书馆驻场研究生","comment":"GPA 和科研撑起全部社交电量，组会发言主要靠打字。","stamp":"已读不回"},
+    {"rule":"early","name":"早八即休学大师","comment":"不到 5 层就结束，床还没起，楼先塌了。","stamp":"已老实"},
+    {"rule":"default","name":"校园天际线建筑师","comment":"没触发极端标签，但把普通的一天稳稳叠成了自己的天际线。","stamp":"未来可期"}
+  ],
+  "socialProfiles": [
+    {"id":"extrovert","name":"e人","detail":"社交满电","comment":"哪里有人，哪里就有你的小组作业。"},
+    {"id":"introvert","name":"i人","detail":"低社交电量","comment":"不是不合群，是社交电量只够撑到下课。"},
+    {"id":"ambivert","name":"i/e叠加态","detail":"社交待机","comment":"群里潜水，线下突然开麦，具体看当天电量和食堂菜单。"},
+    {"id":"spectator","name":"校园小透明","detail":"数据不足","comment":"不是没有故事，是这局还没开始社交采样。"}
   ]
 }

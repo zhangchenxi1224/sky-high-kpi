@@ -1,6 +1,6 @@
 # 绩点卷上天 · Sky-High KPI
 
-像素校园主题的单命无尽堆叠 H5 游戏：一键松钩，在 8 秒 DDL 里，把大学叠成天空的形状。
+像素校园主题的单命无尽堆叠 H5 游戏：一键松钩，在 6 秒 DDL 里，把大学叠成天空的形状。
 
 **[在线试玩（免登录，支持手机）](https://sky-high-kpi-campus-20261125.nevilleatkinson25.chatgpt.site)** · **[下载离线版与部署包](https://github.com/zhangchenxi1224/sky-high-kpi/releases/latest)** · **[实验方案](docs/game-design.md)** · **[验收记录](ACCEPTANCE.md)**
 
@@ -25,7 +25,7 @@ npm run dev
 
 | 命令 | 用途 |
 | --- | --- |
-| `npm test` | 运行 26 项规则与状态机测试 |
+| `npm test` | 运行 32 项规则、称号与状态机测试 |
 | `npm run build` | TypeScript 检查并构建静态站到 `dist/` |
 | `npm run preview` | 本地预览生产构建 |
 | `npm run delivery` | 从已构建的 `dist/` 生成离线 HTML、启动器、静态包和说明 |
@@ -43,11 +43,11 @@ npm run dev
 - READY → SWINGING → DROPPING → RESOLVE → CAMERA_SHIFT → GAME_OVER，单命结束，无毕业强制弹窗。
 - 统一 88×88 世界单位砖宽与高度、重力 1400 单位/s²、纯竖直自由下落，位置保留，不裁切、不漂移、不整塔倾覆。
 - PERFECT 为 6%，志愿砖 12%；中心偏差 ≤50% 落稳，超出落空。完美仅吸附最多 2 单位，保留真实歪楼。
-- 8 秒 DDL、最后 2 秒边缘红光/心跳预警、到期强制提交。
+- 6 秒 DDL、最后 2 秒边缘红光/心跳预警、到期强制提交。
 - 随有效层数连续增加的吊车摆速与摆幅、六大类收益、所有 Buff、五款可接受/跳过的诱惑皮肤。
 - 实时楼层 / GPA / 综测、连击、收益浮字、金色粒子、落地挤压、合成音乐及音效。
 - 操场地基、楼顶天际线、日落、深空渐变；手机竖屏与桌面横屏自适应。
-- 本机成绩榜、七套称号、1080×1500 PNG 结业海报（真实塔形、五维雷达图、红章、二维码），可下载或移动端长按保存。
+- 本机成绩榜、十二套称号与四种社交属性、1080×1500 PNG 结业海报（真实塔形、五维雷达图、红章、二维码），可下载或移动端长按保存。
 - React + Vite + TypeScript + Canvas + Zustand + Tailwind CSS + ZzFX + qrcode，无后端、无追踪脚本。
 
 ## 规则补充与解释
