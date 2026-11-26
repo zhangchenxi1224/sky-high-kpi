@@ -15,12 +15,12 @@
     "gameOver":["不讲不讲，退学重开！","我将辞职专心研究这一局","爱你老己，下把再来","算了嘛警官，放我一马","那咋了，受着呗","地球 Online 又卡 BUG 了"]
   },
   "titles": [
-    {"rule":"temptation","name":"赛博奶头乐首席鉴赏官","comment":"红果看了八十集，直播一场没落。如何呢，又能怎？","stamp":"爱你老己"},
-    {"rule":"resist","name":"无情预制卷王","comment":"康神开播不动心，跑刀喊你你不去，建议查查活人感。","stamp":"我要验牌"},
-    {"rule":"volunteer","name":"综测航天基地跑刀鼠鼠","comment":"专摸高性价比综测大红，已携满包时长安全撤离。","stamp":"千万撤离"},
-    {"rule":"research","name":"纯手搓老艺术家","comment":"坚持纯手搓，结果被查重判了 92% AIGC。","stamp":"大修退回"},
-    {"rule":"champion","name":"瓦场悟道 · 破鼎战神","comment":"满绩基础，冲出大气层就不基础，中国人能飞！","stamp":"夯爆了"},
-    {"rule":"early","name":"早八即休学大师","comment":"不讲不讲，我将全职在家研究为什么这一块就歪了。","stamp":"已老实"},
-    {"rule":"default","name":"校园天际线建筑师","comment":"一层一层，把普通的一天叠成了不普通的风景。","stamp":"未来可期"}
+    {"rule":"temptation","name":"赛博奶头乐首席鉴赏官","comment":"三次接住红果、直播和跑刀，GPA 被啃掉 0.45，快乐倒是很稳定。","stamp":"再看一集"},
+    {"rule":"resist","name":"无情预制卷王","comment":"康神开播先验牌，跑刀喊你先拒绝；三次忍住诱惑，20 层后还在硬扛。","stamp":"我要验牌"},
+    {"rule":"volunteer","name":"综测航天基地跑刀鼠鼠","comment":"志愿与实践折算占优，带着时长和红章安全撤离，主打高性价比综测。","stamp":"千万撤离"},
+    {"rule":"research","name":"纯手搓老艺术家","comment":"科研砖最多却频繁没落正；不是不会写，是被查重判了 92% AIGC。","stamp":"大修退回"},
+    {"rule":"champion","name":"瓦场悟道 · 破鼎战神","comment":"30 层以上、GPA 3.80 以上；绩点基础，瓦场悟道就不基础。","stamp":"夯爆了"},
+    {"rule":"early","name":"早八即休学大师","comment":"不到 5 层就结束，床还没起，楼先塌了。","stamp":"已老实"},
+    {"rule":"default","name":"校园天际线建筑师","comment":"没触发极端标签，但把普通的一天稳稳叠成了自己的天际线。","stamp":"未来可期"}
   ]
 }
