@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {GameEngine} from '../src/game/engine';
-import {catalog,difficulty,drawBlock,emptyKpi,judge,reward,RULES,score,seeded,weights,getTitle,FIXED_SEQUENCE,type Kind} from '../src/game/rules';
+import {catalog,difficulty,drawBlock,emptyKpi,judge,reward,RULES,score,seeded,weights,getTitle,getSocialProfile,socialMetrics,FIXED_SEQUENCE,type Kind} from '../src/game/rules';
 const approx=(a:number,b:number)=>assert.ok(Math.abs(a-b)<1e-7,`${a} != ${b}`);
 const block=(id:string)=>({...catalog.find(b=>b.id===id)!});
 function land(e:GameEngine,id:string,delta=0){if(e.phase==='READY')e.start();e.current=block(id);e.phase='SWINGING';e.currentX=e.topX+delta;e.currentY=e.topY-RULES.height-1;e.drop();e.update(.05);assert.equal(e.phase,'CAMERA_SHIFT');}
@@ -73,4 +73,21 @@ test('resisting consecutive temptation offers survives intervening regular block
 test('fixed scenario contains all 12 room sprites and five temptation skins',()=>{const e=new GameEngine(3,'fixed');e.start();const seen:number[]=[];for(let i=0;i<FIXED_SEQUENCE.length;i++){seen.push(e.current!.sprite);land(e,e.current!.id);next(e);}assert.equal(new Set(seen).size,12);});
 test('100 floors continue without graduation modal or cropped width',()=>{const e=new GameEngine(3,'fixed');for(let i=0;i<100;i++){land(e,'study');next(e);}assert.equal(e.floor,100);assert.equal(e.phase,'SWINGING');assert.equal(e.kpi.gpa,4);assert.equal(e.tower.length,100);});
 test('title priority prefers accepted temptation even with champion metrics',()=>{const s={floor:35,kpi:{...emptyKpi(),gpa:4},accepted:3,maxSkipStreak:0,maxCombo:10,researchImperfect:0,counts:{}};assert.equal(getTitle(s).rule,'temptation');assert.equal(getTitle({...s,accepted:0}).rule,'champion');});
+test('social profiles classify normalized KPI balance',()=>{
+  assert.equal(socialMetrics({...emptyKpi(),gpa:4,research:15}).id,'introvert');
+  assert.equal(socialMetrics({...emptyKpi(),competition:30,volunteer:30,practice:15}).id,'extrovert');
+  assert.equal(socialMetrics({...emptyKpi(),gpa:2,research:7.5,competition:15,volunteer:15,practice:7.5}).id,'ambivert');
+  assert.equal(getSocialProfile(emptyKpi()).profile.name,'校园小透明');
+});
+test('ratio-based ending titles cover comeback, all-rounder, project and library builds',()=>{
+  const base={accepted:0,maxSkipStreak:0,maxCombo:4,researchImperfect:0,counts:{}};
+  const comeback={...base,floor:20,kpi:{gpa:2.5,research:4,competition:20,volunteer:4,practice:10}};
+  const allRounder={...base,floor:25,kpi:{gpa:3.2,research:10,competition:20,volunteer:20,practice:10}};
+  const project={...base,floor:15,maxCombo:1,kpi:{gpa:1,research:2,competition:25,volunteer:20,practice:12}};
+  const library={...base,floor:15,kpi:{gpa:3.8,research:15,competition:0,volunteer:0,practice:0}};
+  assert.equal(getTitle(comeback).rule,'comeback');
+  assert.equal(getTitle(allRounder).rule,'allRounder');
+  assert.equal(getTitle(project).rule,'projectStar');
+  assert.equal(getTitle(library).rule,'libraryHermit');
+});
 test('fixed simulation is stable across different rendering frame sizes',()=>{const a=new GameEngine(77),b=new GameEngine(77);a.start();b.start();a.update(1);for(let i=0;i<60;i++)b.update(1/60);approx(a.currentX,b.currentX);approx(a.ddl,b.ddl);});

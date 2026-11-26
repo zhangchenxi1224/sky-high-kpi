@@ -1,7 +1,7 @@
 import QRCode from 'qrcode';
 import type {Snapshot} from '../game/engine';
 import type {Placed} from '../game/engine';
-import {getTitle} from '../game/rules';
+import {getSocialProfile,getTitle} from '../game/rules';
 const font='"Microsoft YaHei", "PingFang SC", sans-serif';
 export async function makePoster(s:Snapshot,tower:Placed[]):Promise<string>{
   const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1500;const c=canvas.getContext('2d')!;
@@ -10,7 +10,7 @@ export async function makePoster(s:Snapshot,tower:Placed[]):Promise<string>{
   text('SKY-HIGH KPI  /  校园档案',80,104,23);text('本科四年综测',540,200,65,'#27314b','center');text('结业鉴定表',540,280,65,'#27314b','center');
   text('此表仅记录本次游戏成绩 · 不代表真实学业评价',540,332,21,'#737782','center');
   c.fillStyle='#28344d';c.fillRect(78,370,924,135);text(`${s.floor} F`,115,458,70,'#ffe4a5');text('综测总分',960,416,22,'#f3ebdd','right');text(String(s.score).padStart(5,'0'),960,472,51,'#ffe4a5','right');
-  const title=getTitle(s);text(title.name,540,575,37,'#27314b','center');
+  const title=getTitle(s);const social=getSocialProfile(s.kpi);text(`社交属性 · ${social.profile.name} / ${social.profile.detail}`,540,540,20,'#6d6b70','center');text(title.name,540,575,37,'#27314b','center');
   const words=[...title.comment];let line='';let yy=621;for(const ch of words){if(c.measureText(line+ch).width>870){text(line,540,yy,24,'#6d6b70','center');yy+=35;line='';}line+=ch;}text(line,540,yy,24,'#6d6b70','center');
   // True tower offsets, scaled uniformly so the complete run fits the silhouette.
   const maxX=Math.max(0,...tower.map(p=>p.x)),minX=Math.min(0,...tower.map(p=>p.x));const scale=Math.min(2,360/Math.max(88,tower.length*88),300/(maxX-minX+88));const tx=290-(maxX+minX)*scale/2;

@@ -1,5 +1,5 @@
 {
-  "version": "2026.11.2-douyin",
+  "version": "2026.11.3-social",
   "temptationSkins": [
     {"id":"tempt_hongguo","name":"先看两集红果","sprite":7,"primaryColor":"#d95e54","acceptDanmaku":"贵是贵了点，但看了不烧心！","skipDanmaku":"退！别给我看霸总重生！"},
     {"id":"tempt_kangshen","name":"康神开播了","sprite":8,"primaryColor":"#ec8baa","acceptDanmaku":"瓦场悟道，绩点算什么？","skipDanmaku":"忍住！等保研了再看回放！"},
@@ -20,7 +20,17 @@
     {"rule":"volunteer","name":"综测航天基地跑刀鼠鼠","comment":"志愿与实践折算占优，带着时长和红章安全撤离，主打高性价比综测。","stamp":"千万撤离"},
     {"rule":"research","name":"纯手搓老艺术家","comment":"科研砖最多却频繁没落正；不是不会写，是被查重判了 92% AIGC。","stamp":"大修退回"},
     {"rule":"champion","name":"瓦场悟道 · 破鼎战神","comment":"30 层以上、GPA 3.80 以上；绩点基础，瓦场悟道就不基础。","stamp":"夯爆了"},
+    {"rule":"comeback","name":"校园萧炎","comment":"绩点暂时没起飞，竞赛和实践已经开始冒火；三十年河东，三十年河西，莫欺少年穷。","stamp":"莫欺少年穷"},
+    {"rule":"allRounder","name":"六边形校园战神","comment":"绩点、科研、竞赛、志愿、实践五项全开，老师看了沉默，同学看了转发。","stamp":"样样都行"},
+    {"rule":"projectStar","name":"项目组永动机","comment":"PPT 能改到凌晨，赞助能谈到宿舍，群聊永远第一个回“收到”。","stamp":"群聊置顶"},
+    {"rule":"libraryHermit","name":"图书馆驻场研究生","comment":"GPA 和科研撑起全部社交电量，组会发言主要靠打字。","stamp":"已读不回"},
     {"rule":"early","name":"早八即休学大师","comment":"不到 5 层就结束，床还没起，楼先塌了。","stamp":"已老实"},
     {"rule":"default","name":"校园天际线建筑师","comment":"没触发极端标签，但把普通的一天稳稳叠成了自己的天际线。","stamp":"未来可期"}
+  ],
+  "socialProfiles": [
+    {"id":"extrovert","name":"e人","detail":"社交满电","comment":"哪里有人，哪里就有你的小组作业。"},
+    {"id":"introvert","name":"i人","detail":"低社交电量","comment":"不是不合群，是社交电量只够撑到下课。"},
+    {"id":"ambivert","name":"i/e叠加态","detail":"社交待机","comment":"群里潜水，线下突然开麦，具体看当天电量和食堂菜单。"},
+    {"id":"spectator","name":"校园小透明","detail":"数据不足","comment":"不是没有故事，是这局还没开始社交采样。"}
   ]
 }
