@@ -40,8 +40,17 @@ test('dissolve grid has stable bounded timings, proceeds upwards and covers befo
 });
 test('MP3 background music loops independently of effects and pauses without losing position',async()=>{
   const audio={paused:true,loop:false,volume:0,preload:'',currentTime:42,plays:0,pause(){this.paused=true;},play(){this.paused=false;this.plays++;return Promise.resolve();}};
-  const sound=new Sound(()=>audio as unknown as HTMLAudioElement);sound.setMusic(true);assert.equal(audio.plays,0);
-  await sound.unlock();assert.equal(audio.plays,1);assert.equal(audio.loop,true);near(audio.volume,.32);
+  const sound=new Sound(()=>audio as unknown as HTMLAudioElement);sound.setMusic(true);assert.equal(audio.plays,1);
+  await sound.unlock();assert.equal(audio.plays,1);assert.equal(audio.loop,true);assert.equal(audio.preload,'auto');near(audio.volume,.32);
   sound.effects=false;sound.paused=true;assert.equal(audio.paused,true);sound.paused=false;assert.equal(audio.paused,false);assert.equal(audio.currentTime,42);
   sound.setMusic(false);assert.equal(audio.paused,true);sound.setMusic(true);assert.equal(audio.paused,false);sound.dispose();assert.equal(audio.paused,true);
+});
+
+test('blocked autoplay waits for interaction, retries once allowed and respects manual mute',async()=>{
+  const audio={paused:true,loop:false,volume:0,preload:'',plays:0,pause(){this.paused=true;},play(){this.plays++;if(this.plays===1){const error=new Error('Gesture required');error.name='NotAllowedError';return Promise.reject(error);}this.paused=false;return Promise.resolve();}};
+  const sound=new Sound(()=>audio as unknown as HTMLAudioElement);
+  sound.setMusic(true);await Promise.resolve();assert.equal(audio.plays,1);assert.equal(audio.paused,true);
+  sound.paused=false;assert.equal(audio.plays,1,'No retry loop before interaction');
+  await sound.unlock();assert.equal(audio.plays,2);assert.equal(audio.paused,false);
+  sound.setMusic(false);await sound.unlock();assert.equal(audio.plays,2);assert.equal(audio.paused,true);
 });

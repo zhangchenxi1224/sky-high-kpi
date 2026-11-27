@@ -75,7 +75,8 @@ export function App(){
 
     start();
   };
-  const returnHome=()=>{
+  const returnHome=(openBirdConversation=false)=>{
+    usePreferences.setState({birdBubble:openBirdConversation});
     const game=new GameEngine(Number(query.get('seed'))||Date.now()>>>0,mode);
     renderer.current?.resize(innerWidth,innerHeight,game);
     engine.current=game;attach(game);setPanel(null);setBirdDay(loadBirdDay());setBirdGained(0);
@@ -101,7 +102,13 @@ export function App(){
     const resize=()=>r.resize(innerWidth,innerHeight,engine.current);resize();window.addEventListener('resize',resize);
     let raf=0,previous=performance.now(),lastHud=0,frameCount=0,fpsTime=previous;
     const tick=(now:number)=>{const delta=Math.min(.1,(now-previous)/1000);previous=now;frameCount++;if(now-fpsTime>=1000){setFps(Math.round(frameCount*1000/(now-fpsTime)));fpsTime=now;frameCount=0;}const game=engine.current;game.update(delta,autoRef.current&&game.mode==='fixed'?demoDropReady:undefined);r.render(game);if(now-lastHud>60){setS(game.snapshot());lastHud=now;}if(r.assetsReady)setAssetReady(true);raf=requestAnimationFrame(tick);};raf=requestAnimationFrame(tick);
-    const hidden=()=>{if(document.hidden){if(engine.current.phase!=='READY'&&!engine.current.finished)engine.current.paused=true;sound.current.paused=true;refresh();}};document.addEventListener('visibilitychange',hidden);
+    const hidden=()=>{if(document.hidden){if(engine.current.phase!=='READY'&&!engine.current.finished)engine.current.paused=true;sound.current.paused=true;refresh();}else{sound.current.paused=engine.current.paused&&!transitionRef.current;}};document.addEventListener('visibilitychange',hidden);
+    const interact=(event:Event)=>{
+      if(event.target instanceof Element&&event.target.closest('.music-control'))return;
+      sound.current.paused=document.hidden||(engine.current.paused&&!transitionRef.current);
+      void sound.current.unlock();
+    };
+    window.addEventListener('pointerup',interact);window.addEventListener('keydown',interact);
     const key=(event:KeyboardEvent)=>{
       if(transitionRef.current){event.preventDefault();return;}
       if(event.repeat)return;
@@ -116,10 +123,10 @@ export function App(){
       else if(event.code==='KeyS'){engine.current.skipCurrentBlock();refresh();}
     };
     window.addEventListener('keydown',key);
-    return()=>{cancelAnimationFrame(raf);window.removeEventListener('resize',resize);window.removeEventListener('keydown',key);document.removeEventListener('visibilitychange',hidden);e.listeners.clear();sound.current.dispose();};
+    return()=>{cancelAnimationFrame(raf);window.removeEventListener('resize',resize);window.removeEventListener('keydown',key);window.removeEventListener('pointerup',interact);window.removeEventListener('keydown',interact);document.removeEventListener('visibilitychange',hidden);e.listeners.clear();sound.current.dispose();};
   },[]);
   useEffect(()=>{sound.current.effects=prefs.effects;if(renderer.current){renderer.current.effects=prefs.effects;renderer.current.night=prefs.night;}sound.current.setMusic(prefs.music);return()=>sound.current.dispose();},[prefs.music,prefs.effects,prefs.night]);
-  useEffect(()=>{sound.current.paused=s.paused;},[s.paused]);
+  useEffect(()=>{sound.current.paused=document.hidden||(s.paused&&!transitioning);},[s.paused,transitioning]);
   useEffect(()=>{if(renderer.current)renderer.current.detailedSway=prefs.detailedSway;},[prefs.detailedSway]);
   useEffect(()=>{if(!s.paused&&s.phase==='SWINGING'&&s.ddl<=2&&s.ddl>0){sound.current.effect('warning');}},[Math.ceil(s.ddl*3),s.paused]);
   const openPanel=(p:typeof panel)=>{if(engine.current.phase!=='READY'&&!engine.current.finished)engine.current.paused=true;setPanel(p);refresh();};
@@ -131,7 +138,7 @@ export function App(){
     <ComboOverlay s={s} effects={prefs.effects} reducedMotion={reducedMotion}/>
     <nav className="top-controls" aria-label="游戏设置">
       {!preview&&s.phase!=='GAME_OVER'&&<button className="pixel-button gold pause-control" onClick={()=>{engine.current.togglePause();refresh();}}>Ⅱ 暂停</button>}
-      <button className={`pixel-button red ${prefs.music?'':'muted'}`} aria-pressed={prefs.music} onClick={()=>{void sound.current.unlock();prefs.toggle('music');}}><span>♫</span> 音乐{prefs.music?'':' ×'}</button>
+      <button className={`pixel-button red music-control ${prefs.music?'':'muted'}`} aria-pressed={prefs.music} onClick={()=>{const enabled=!prefs.music;prefs.toggle('music');sound.current.setMusic(enabled);if(enabled)void sound.current.unlock();}}><span>♫</span> 音乐{prefs.music?'':' ×'}</button>
       <button className={`pixel-button blue ${prefs.effects?'':'muted'}`} aria-pressed={prefs.effects} onClick={()=>prefs.toggle('effects')}><span>✦</span> 特效{prefs.effects?'':' ×'}</button>
       <button className="pixel-button green" onClick={()=>openPanel('campus')}><span>▥</span> 校区</button>
     </nav>

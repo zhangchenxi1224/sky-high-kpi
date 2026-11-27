@@ -3,19 +3,22 @@ import {assetUrl} from './assets';
 type Synth={ZZFX:{audioContext:AudioContext;play:(...args:any[])=>AudioBufferSourceNode}};
 export class Sound {
   synth:Synth|null=null;music=false;effects=true;
-  private track:HTMLAudioElement|null=null;private unlocked=false;private isPaused=false;
+  private track:HTMLAudioElement|null=null;private autoplayBlocked=false;private isPaused=false;
   constructor(private createTrack=()=>new Audio(assetUrl('campus-bgm.mp3'))){}
   get paused(){return this.isPaused;}
   set paused(value:boolean){this.isPaused=value;this.syncMusic();}
   private syncMusic(){
-    if(!this.music||this.isPaused||!this.unlocked){this.track?.pause();return;}
-    if(!this.track){this.track=this.createTrack();this.track.loop=true;this.track.volume=.32;this.track.preload='none';
+    if(!this.music||this.isPaused){this.track?.pause();return;}
+    if(!this.track){this.track=this.createTrack();this.track.loop=true;this.track.volume=.32;this.track.preload='auto';
       if(typeof document!=='undefined'){this.track.hidden=true;this.track.dataset.bgm='campus';document.body.append(this.track);}
     }
-    if(this.track.paused)void this.track.play().catch(()=>{/* Retry on the next user gesture if autoplay was blocked. */});
+    if(this.track.paused&&!this.autoplayBlocked)void this.track.play().catch((error:unknown)=>{
+      // A normal browser denial waits for real interaction; never loop autoplay attempts.
+      if(error instanceof Error&&error.name==='NotAllowedError')this.autoplayBlocked=true;
+    });
   }
   async unlock(){
-    this.unlocked=true;this.syncMusic();
+    this.autoplayBlocked=false;this.syncMusic();
     try{this.synth??=await import('zzfx') as Synth;await this.synth.ZZFX.audioContext.resume();}catch{/* Audio is optional; a blocked device never stops play. */}
   }
   note(freq:number,volume=.08,duration=.12){if(!this.synth||this.paused)return;this.synth.ZZFX.play(volume,0,freq,.01,duration,.1,0,1,0,0,0,0,0,0,0,0,0,.6);}
