@@ -9,19 +9,17 @@ const query=new URLSearchParams(location.search);
 const initialSeed=Number(query.get('seed'))||Date.now()>>>0;
 const mode=query.get('mode')==='fixed'?'fixed':'normal';
 const swayDemo=mode==='fixed'&&query.get('demo')==='sway';
+// Equal alternating misses of the center reveal cumulative shake without net tower lean.
+const demoOffsets=[0,0,0,0,0,0,28,-28,28,-28,40,0,0,0];
 function demoDropReady(game:GameEngine){
   const offset=game.currentX-game.topX;
-  const step=game.floor%12;
-  if(swayDemo&&step>=2&&step<7){
-    const directed=offset*(game.floor%2===0?-1:1);
-    return directed>=32&&directed<=41;
-  }
-  return Math.abs(offset)<2.5;
+  const target=swayDemo?demoOffsets[game.floor%demoOffsets.length]:0;
+  return Math.abs(offset-target)<2.5;
 }
 const fmt=(n:number)=>Number(n.toFixed(2)).toString();
 function Cap(){return <svg className="cap" viewBox="0 0 36 28" aria-hidden="true"><path fill="#b58b46" d="M8 14h21v9l-11 5-10-5z"/><path fill="#ffe4a4" d="M1 9 18 1 35 9v4L18 21 1 13z"/><path fill="#d7ad62" d="m1 13 17 8 17-8v-4l-17 8L1 9z"/><path stroke="#fce3a4" strokeWidth="2" d="M31 14v10"/></svg>}
 function StatGrid({s}:{s:Snapshot}){return <div className="stat-grid"><div><span>绩点 GPA</span><b>{s.kpi.gpa.toFixed(2)}<small> / 4.00</small></b></div><div><span>科研成果</span><b>{fmt(s.kpi.research)}</b></div><div><span>竞赛积分</span><b>{fmt(s.kpi.competition)}</b></div><div><span>志愿时长</span><b>{fmt(s.kpi.volunteer)}<small> h</small></b></div><div><span>社会实践</span><b>{fmt(s.kpi.practice)}</b></div><div><span>最高连击</span><b>{s.maxCombo}<small> COMBO</small></b></div></div>}
-const instructions=[['课业','PERFECT 额外 +1 连击，GPA +0.18～0.28'],['科研','非完美收益减半；下一块摆速 +12%'],['竞赛','积分 +5～8；偏移超 25% 时下块摆幅 +15%'],['志愿','完美窗口加宽至砖宽的 12%'],['实践','接下来两块的正向 KPI 收益 +25%'],['冰美式','未来 5 秒摆速 −45%'],['邪修秘籍','GPA +0.10，后三投摆幅 −30%'],['赛博诱惑','GPA −0.15，难度回退 6 层；也可免费跳过']];
+const instructions=[['课业','PERFECT 额外 +1 连击，GPA +0.20 / 0.23 / 0.26'],['科研','普通落稳拿 70%，完美拿全额；下一块摆速 +12%'],['竞赛','积分 +4 或 +6；偏移超 25% 时下块摆幅 +15%'],['志愿','完美窗口加宽至砖宽的 12%'],['实践','接下来两块的正向 KPI 收益 +25%'],['冰美式','未来 5 秒摆速 −45%'],['邪修秘籍','GPA +0.10，后三投摆幅 −30%'],['赛博诱惑','GPA −0.15，难度回退 6 层；也可免费跳过']];
 export function App(){
   const canvas=useRef<HTMLCanvasElement>(null),engine=useRef<GameEngine>(new GameEngine(initialSeed,mode)),renderer=useRef<Renderer|null>(null),sound=useRef(new Sound());
   const [s,setS]=useState(engine.current.snapshot()),[panel,setPanel]=useState<'campus'|'rules'|'records'|null>(null),[poster,setPoster]=useState<string|null>(null),[exporting,setExporting]=useState(false),[error,setError]=useState('');
@@ -58,7 +56,7 @@ export function App(){
     const e=engine.current;const r=new Renderer(canvas.current!);renderer.current=r;attach(e);
     const resize=()=>r.resize(innerWidth,innerHeight,engine.current);resize();window.addEventListener('resize',resize);
     let raf=0,previous=performance.now(),lastHud=0,frameCount=0,fpsTime=previous;
-    const tick=(now:number)=>{const delta=Math.min(.1,(now-previous)/1000);previous=now;frameCount++;if(now-fpsTime>=1000){setFps(Math.round(frameCount*1000/(now-fpsTime)));fpsTime=now;frameCount=0;}const game=engine.current;game.update(delta);if(autoRef.current&&game.mode==='fixed'&&!game.paused&&game.phase==='SWINGING'&&demoDropReady(game))game.drop();r.render(game);if(now-lastHud>60){setS(game.snapshot());lastHud=now;}if(r.sprites.length===12)setAssetReady(true);raf=requestAnimationFrame(tick);};raf=requestAnimationFrame(tick);
+    const tick=(now:number)=>{const delta=Math.min(.1,(now-previous)/1000);previous=now;frameCount++;if(now-fpsTime>=1000){setFps(Math.round(frameCount*1000/(now-fpsTime)));fpsTime=now;frameCount=0;}const game=engine.current;game.update(delta,autoRef.current&&game.mode==='fixed'?demoDropReady:undefined);r.render(game);if(now-lastHud>60){setS(game.snapshot());lastHud=now;}if(r.sprites.length===12)setAssetReady(true);raf=requestAnimationFrame(tick);};raf=requestAnimationFrame(tick);
     const hidden=()=>{if(document.hidden){if(engine.current.phase!=='READY'&&!engine.current.finished)engine.current.paused=true;sound.current.paused=true;refresh();}};document.addEventListener('visibilitychange',hidden);
     const key=(event:KeyboardEvent)=>{
       if(event.repeat)return;
@@ -77,6 +75,7 @@ export function App(){
   },[]);
   useEffect(()=>{sound.current.effects=prefs.effects;if(renderer.current){renderer.current.effects=prefs.effects;renderer.current.night=prefs.night;}sound.current.setMusic(prefs.music);return()=>sound.current.dispose();},[prefs.music,prefs.effects,prefs.night]);
   useEffect(()=>{sound.current.paused=s.paused;},[s.paused]);
+  useEffect(()=>{if(renderer.current)renderer.current.detailedSway=prefs.detailedSway;},[prefs.detailedSway]);
   useEffect(()=>{if(!s.paused&&s.phase==='SWINGING'&&s.ddl<=2&&s.ddl>0){sound.current.effect('warning');}},[Math.ceil(s.ddl*3),s.paused]);
   const openPanel=(p:typeof panel)=>{if(engine.current.phase!=='READY'&&!engine.current.finished)engine.current.paused=true;setPanel(p);refresh();};
   const closePanel=()=>{setPanel(null);engine.current.paused=false;refresh();};
@@ -114,7 +113,9 @@ export function App(){
     {s.paused&&!panel&&!s.finished&&<div className="modal-backdrop"><section className="paper-modal compact" role="dialog" aria-modal="true" aria-labelledby="pause-title"><span className="modal-eyebrow">TAKE A BREATH</span><h2 id="pause-title">课间休息</h2><p>DDL 和吊车已暂停，喝口水再继续。</p><div className="result-buttons"><button className="pixel-button blue" autoFocus onClick={()=>{engine.current.paused=false;void sound.current.unlock();refresh();}}>继续卷楼</button><button className="pixel-button gold" onClick={restart}>重新开局</button></div></section></div>}
     {s.finished&&!poster&&<div className="modal-backdrop result-backdrop"><section className="paper-modal result" role="dialog" aria-modal="true" aria-labelledby="result-title"><span className="modal-eyebrow">CAMPUS PERFORMANCE REPORT</span><h2 id="result-title">本次结业鉴定</h2><div className="result-score"><b>{s.floor}<small> F</small></b><div><span>综测总分</span><strong>{s.score.toLocaleString()}</strong></div></div><div className="result-title">{title.name}</div><p>{title.comment}</p><StatGrid s={s}/><div className="result-detail">完美落点 {s.perfects} 次 · 接住诱惑 {s.accepted} 次 · 忍痛跳过 {s.skipped} 次</div>{s.forced&&<p className="forced-note">本局由 8 秒 DDL 强制松钩后落空。</p>}<div className="result-buttons"><button className="pixel-button blue" autoFocus onClick={restart}>重开大学</button><button className="pixel-button gold" disabled={exporting} onClick={exportPoster}>{exporting?'正在盖章…':'生成结业海报'}</button></div><button className="text-link" onClick={()=>openPanel('records')}>查看本机成绩榜</button>{error&&<p role="alert">{error}</p>}</section></div>}
     {panel&&<div className="modal-backdrop"><section className="paper-modal campus-modal" role="dialog" aria-modal="true" aria-labelledby="campus-title"><button className="close" aria-label="关闭窗口" onClick={closePanel}>×</button><span className="modal-eyebrow">CAMPUS NOTICEBOARD</span><h2 id="campus-title">{panel==='rules'?'新生入学指南':panel==='records'?'本机成绩榜':'校园公告栏'}</h2><div className="tabs"><button className={panel==='campus'?'selected':''} onClick={()=>setPanel('campus')}>本局账本</button><button className={panel==='rules'?'selected':''} onClick={()=>setPanel('rules')}>玩法指南</button><button className={panel==='records'?'selected':''} onClick={()=>setPanel('records')}>成绩榜</button></div>
-      {panel==='campus'&&<><StatGrid s={s}/><div className="campus-options"><span>校园景色</span><button className="pixel-button blue" onClick={()=>prefs.toggle('night')}>{prefs.night?'星空校区':'日落校区'}</button></div><p className="small-print">每一块小楼，都算大学的一次努力。成绩仅保存在当前浏览器。</p><button className="pixel-button blue wide" onClick={closePanel}>{preview?'回到校园':'继续卷楼'}</button></>}
+      {panel==='campus'&&<><StatGrid s={s}/><div className="campus-options"><span>校园景色</span><button className="pixel-button blue" onClick={()=>prefs.toggle('night')}>{prefs.night?'星空校区':'日落校区'}</button></div>
+        <div className="campus-options"><label htmlFor="sway-style">楼体摇晃</label><select id="sway-style" value={prefs.detailedSway?'detailed':'classic'} onChange={()=>prefs.toggle('detailedSway')}><option value="detailed">细腻</option><option value="classic">经典</option></select></div>
+        <p className="small-print">每一块小楼，都算大学的一次努力。成绩仅保存在当前浏览器。</p><button className="pixel-button blue wide" onClick={closePanel}>{preview?'回到校园':'继续卷楼'}</button></>}
       {panel==='rules'&&<><p>对准楼顶，点击画面或按 <kbd>SPACE</kbd> 松钩。每投只有 <b>8 秒</b>，落空一次即结束。</p><div className="rule-summary"><span>完美 ≤ 6%</span><span>落稳 ≤ 50%</span><span>超出即落空</span></div><p className="small-print">百分比为砖块中心相对下层中心的偏移 / 砖宽；志愿砖完美窗口为 12%。</p><div className="block-guide">{instructions.map(([name,desc],i)=><div key={name}><div className="mini-room" style={{backgroundPosition:`${[0,1,2,3,4,5,6,11][i]%4*100/3}% ${Math.floor([0,1,2,3,4,5,6,11][i]/4)*50}%`}}/><div><b>{name}</b><span>{desc}</span></div></div>)}</div><p className="small-print">PERFECT 每级连击增加 10% 正向收益，最高 ×2；课业额外 +1 连击。诱惑扣分不翻倍。竞赛记原始积分，每点折算 15 分。</p><p className="small-print">综测 = 层数×10 + GPA×100 + 科研×30 + 竞赛×15 + 志愿×5 + 实践×20。按 Esc 暂停，S 跳过诱惑。</p><button className="pixel-button blue wide" onClick={closePanel}>懂了，去卷楼</button></>}
       {panel==='records'&&<><p className="small-print">当前浏览器 · 按综测总分排序 · 保留前 10 名</p>{prefs.records.length?<ol className="record-list">{prefs.records.map((r,i)=><li key={r.date+i}><span>{i+1}</span><div><b>{r.title}</b><small>{r.floor}F · GPA {r.gpa.toFixed(2)}</small></div><strong>{r.score}</strong></li>)}</ol>:<div className="empty-record">还没有成绩。<br/>校园的天际线，等你来写。</div>}<button className="pixel-button blue wide" onClick={closePanel}>返回校园</button></>}
     </section></div>}

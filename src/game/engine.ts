@@ -1,6 +1,11 @@
 import {RULES, catalog, difficulty, drawBlock, emptyKpi, FIXED_SEQUENCE, judge, reward, score, seeded, type Block, type Kind, type KPI} from './rules';
 import {hookPosition} from './hook';
+import {TowerMotion} from './tower-motion';
 import memes from '../config/memePack.json';
+const finalZoom=.82;
+const visibleFloors=5.75;
+const hookToBrick=24;
+const minHangingGap=1.6*RULES.height;
 export type Phase='READY'|'SWINGING'|'DROPPING'|'RESOLVE'|'CAMERA_SHIFT'|'GAME_OVER';
 export type Placed={block:Block;x:number;y:number;perfect:boolean};
 export type GameEvent={type:'start'|'spawn'|'drop'|'land'|'miss'|'over'|'skip'|'warning'|'message';text?:string;perfect?:boolean;combo?:number};
@@ -11,6 +16,7 @@ export class GameEngine {
   cameraY=0;cameraX=0;cameraFromY=0;cameraFromX=0;cameraTime=0;groundScreen=620;hangingScreen=170;viewHeight=720;ropeLength=190;
   time=0;phaseTime=0;ddl=8;paused=false;finished=false;forced=false;warningPlayed=false;rollback=0;
   instability=0;sway=0;private swayVelocity=0;landingFeedback='';
+  readonly detailedMotion=new TowerMotion();
   speedNext=1;angleNext=1;speedMultiplier=1;angleMultiplier=1;practiceLeft=0;notesLeft=0;coffeeUntil=0;
   message='';messageUntil=0;rewardLabel='';verdict='';lastLandTime=-5;drawHistory:Kind[]=[];drawIndex=0;
   seed:number;mode:'normal'|'fixed';random:()=>number;listeners=new Set<(event:GameEvent)=>void>();private accumulator=0;private extremeAnnounced=false;
@@ -27,21 +33,29 @@ export class GameEngine {
   }
   get viewZoom(){
     const transition=this.phase==='CAMERA_SHIFT'?1-Math.min(1,this.cameraTime/.43):0;
-    return 1-.18*Math.min(1,Math.max(0,this.floor-transition)/6);
+    const progress=Math.min(1,Math.max(0,(this.floor-transition-2)/4));
+    return 1-(1-finalZoom)*progress*progress*(3-2*progress);
   }
   private cameraTarget(floor:number){
-    const roof=Math.max(this.hangingScreen+RULES.height+75,this.viewHeight/.82-6*RULES.height);
+    if(floor<=2)return 0;
+    const roof=Math.max(this.hangingScreen+RULES.height+75,this.viewHeight/finalZoom-visibleFloors*RULES.height);
     return Math.max(0,floor*RULES.height+roof-this.groundScreen);
   }
   get topX(){return this.tower.at(-1)?.x??0;}
   get topY(){return -this.floor*RULES.height;}
+  get hookPivotY(){
+    const roof=this.topY+this.groundScreen+this.cameraY;
+    // The rope reaches its lowest point when vertical; lift the entire rig if needed.
+    const lowestPivot=roof-minHangingGap-RULES.height-hookToBrick-this.ropeLength;
+    return Math.min(-48,lowestPivot);
+  }
   get coffeeRemaining(){return Math.max(0,this.coffeeUntil-this.time);}
   get params(){const d=difficulty(this.floor+1,this.rollback);return {...d,omega:d.omega*this.speedMultiplier*(this.coffeeRemaining>0?.55:1),angle:d.angle*this.angleMultiplier};}
   start(){if(this.phase!=='READY')return false;this.emit({type:'start'});this.spawn();return true;}
   spawn(){
     this.speedMultiplier=this.speedNext;this.speedNext=1;
     this.angleMultiplier=this.angleNext*(this.notesLeft>0?.7:1);this.angleNext=1;if(this.notesLeft>0)this.notesLeft--;
-    const high=this.params.omega>=.75*RULES.omegaMax;
+    const high=this.params.omega>=RULES.highPressureOmega;
     const id=FIXED_SEQUENCE[this.drawIndex%FIXED_SEQUENCE.length];
     this.current=this.mode==='fixed'?{...catalog.find(b=>b.id===id)!}:drawBlock(this.floor+1,this.random,high,this.drawHistory.slice(-4).includes('temptation'));
     this.drawIndex++;this.drawHistory.push(this.current.kind);if(this.drawHistory.length>4)this.drawHistory.shift();
@@ -50,15 +64,25 @@ export class GameEngine {
     if(this.current.kind==='temptation')this.say('GPA −0.15 · 摆速 / 摆幅回退 6 层');
     else if(this.params.omega>RULES.omegaMax*.8&&!this.extremeAnnounced){this.say(this.choose(memes.danmakuBank.extremeSpeed));this.extremeAnnounced=true;}
   }
-  updateHook(){const p=hookPosition(this.phaseAngle,this.params.angle,this.ropeLength);this.hookAngle=p.angle;this.hookX=this.anchorX+p.x;this.hookY=-48+p.y;this.currentX=this.hookX;this.currentY=this.hookY+24-this.groundScreen-this.cameraY;}
+  updateHook(){const p=hookPosition(this.phaseAngle,this.params.angle,this.ropeLength);this.hookAngle=p.angle;this.hookX=this.anchorX+p.x;this.hookY=this.hookPivotY+p.y;this.currentX=this.hookX;this.currentY=this.hookY+hookToBrick-this.groundScreen-this.cameraY;}
   drop(forced=false){if(this.phase!=='SWINGING'||this.paused)return false;this.phase='DROPPING';this.phaseTime=0;this.velocity=0;this.forced=forced;if(forced)this.say('DDL 到了！死线强制提交');this.emit({type:'drop'});return true;}
   skipCurrentBlock(){if(this.phase!=='SWINGING'||this.paused||this.current?.kind!=='temptation')return false;const skin=memes.temptationSkins.find(s=>s.id===this.current!.id)!;this.skipped++;this.skipStreak++;this.maxSkipStreak=Math.max(this.maxSkipStreak,this.skipStreak);this.emit({type:'skip'});this.spawn();this.say(skin.skipDanmaku);return true;}
   togglePause(){if(this.phase==='READY'||this.finished)return;this.paused=!this.paused;}
-  update(dt:number){if(this.paused||this.phase==='READY'||this.finished)return;this.accumulator+=Math.max(0,dt);while(this.accumulator>=1/120){this.step(1/120);this.accumulator-=1/120;if(this.finished)break;}}
+  update(dt:number,autoDrop?:(game:GameEngine)=>boolean){
+    if(this.paused||this.phase==='READY'||this.finished)return;
+    this.accumulator+=Math.max(0,dt);
+    while(this.accumulator>=1/120){
+      this.step(1/120);
+      if(autoDrop&&this.phase==='SWINGING'&&autoDrop(this))this.drop();
+      this.accumulator-=1/120;
+      if(this.finished)break;
+    }
+  }
   private step(dt:number){
     this.time+=dt;this.phaseTime+=dt;
     // Recent placement errors set the sustained sway; each impact adds a directional kick.
     if(RULES.towerSway){
+      this.detailedMotion.step(dt);
       const target=9*this.instability*Math.sin(this.time*3.2);
       this.swayVelocity+=((target-this.sway)*64-this.swayVelocity*9)*dt;
       this.sway+=this.swayVelocity*dt;
@@ -72,7 +96,9 @@ export class GameEngine {
       if(this.currentY+RULES.height>=this.topY){this.phase='RESOLVE';this.resolve();}
     }else if(this.phase==='CAMERA_SHIFT'){
       this.cameraTime+=dt;const p=Math.min(1,this.cameraTime/.43),ease=1-(1-p)**3;
-      this.cameraY=this.cameraFromY+(this.cameraTarget(this.floor)-this.cameraFromY)*ease;this.cameraX=this.cameraFromX+(this.topX-this.cameraFromX)*ease;
+      this.cameraY=this.cameraFromY+(this.cameraTarget(this.floor)-this.cameraFromY)*ease;
+      const targetX=this.floor<=2?0:this.topX;
+      this.cameraX=this.cameraFromX+(targetX-this.cameraFromX)*ease;
       if(p>=1)this.spawn();
     }else if(this.phase==='GAME_OVER'){
       this.velocity+=RULES.gravity*dt;this.currentY+=this.velocity*dt;this.currentX+=Math.sign(this.currentX-this.topX||1)*80*dt;this.rotation+=Math.sign(this.currentX-this.topX||1)*dt*2.8;
@@ -86,6 +112,7 @@ export class GameEngine {
     }
     const perfect=verdict==='PERFECT';this.combo=perfect?this.combo+(block.kind==='study'?2:1):0;this.maxCombo=Math.max(this.maxCombo,this.combo);if(perfect)this.perfects++;
     const previous=this.instability;
+    this.detailedMotion.land(delta,perfect);
     const error=Math.min(1,Math.max(0,(Math.abs(delta)/RULES.width-.08)/.42));
     this.instability=perfect?previous*.55:Math.min(1,previous*.75+error*.44);
     this.swayVelocity+=Math.sign(delta)*error*60;

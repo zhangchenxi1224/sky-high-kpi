@@ -6,6 +6,7 @@ export class Renderer {
   ctx:CanvasRenderingContext2D;sheet=new Image();sprites:HTMLCanvasElement[]=[];width=960;height=720;scale=1;effects=true;night=false;
   sky:HTMLCanvasElement|null=null;skyKey='';
   private reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
+  detailedSway=true;
   constructor(public canvas:HTMLCanvasElement){this.ctx=canvas.getContext('2d')!;this.sheet.onload=()=>this.prepareSprites();this.sheet.src=(window as unknown as {__ROOMS__?:string}).__ROOMS__??`${import.meta.env.BASE_URL}assets/rooms.webp`;}
   prepareSprites(){
     const s=document.createElement('canvas');s.width=this.sheet.width;s.height=this.sheet.height;const c=s.getContext('2d')!;c.drawImage(this.sheet,0,0);const pixels=c.getImageData(0,0,s.width,s.height).data;
@@ -25,15 +26,34 @@ export class Renderer {
     const center=w/(2*zoom)-e.cameraX;
     const ground=e.groundScreen+e.cameraY;
     this.drawGround(center,ground,w/zoom,h/zoom);
-    const roofSway=this.effects&&!this.reducedMotion.matches?e.sway:0;
+    const motionEnabled=this.effects&&!this.reducedMotion.matches;
     // Adjacent floors share their edge displacement, and the base stays planted.
     const flexHeight=Math.min(6,e.floor)||1;
-    const offsetAt=(level:number)=>roofSway*Math.max(0,1-(e.floor-level)/flexHeight);
-    for(const p of e.tower){const y=p.y+ground;if(y>h/zoom||y< -100)continue;let sy=1;if(this.effects&&p===e.tower.at(-1)){const age=e.time-e.lastLandTime;if(age<.3)sy=1-Math.sin(age/.3*Math.PI)*.055;}
+    const offsetAt=(level:number)=>{
+      if(!motionEnabled)return 0;
+      const depth=e.floor-level;
+      if(this.detailedSway)return e.detailedMotion.jointOffset(depth,e.floor);
+      return e.sway*Math.max(0,1-depth/flexHeight);
+    };
+    const roofSway=offsetAt(e.floor);
+    for(const p of e.tower){
+      const y=p.y+ground;
+      if(y>h/zoom||y< -100)continue;
       const level=-p.y/RULES.height,top=offsetAt(level),bottom=offsetAt(level-1);
+      let sy=1;
       c.save();
       c.translate(center+p.x+top,y);
       c.transform(1,0,(bottom-top)/RULES.height,1,0,0);
+      if(level===e.floor&&this.effects){
+        if(this.detailedSway&&motionEnabled){
+          sy=e.detailedMotion.landingScaleY;
+          const spread=1+(1-sy)*.35;
+          c.transform(spread,e.detailedMotion.edgeSlope,0,1,0,0);
+        }else if(!this.detailedSway){
+          const age=e.time-e.lastLandTime;
+          if(age<.3)sy=1-Math.sin(age/.3*Math.PI)*.055;
+        }
+      }
       this.room(p.block.sprite,0,0,sy);
       c.restore();
     }
@@ -41,7 +61,7 @@ export class Renderer {
       this.rope(w/2,-48,w/2,132);this.room(0,w/2,156);this.label('高数',w/2+58,197,'#fff1cf');
     }else{
       const craneCenter=center+roofSway;
-      if(e.phase==='SWINGING'){this.rope(craneCenter+e.anchorX,-48,craneCenter+e.hookX,e.hookY);}
+      if(e.phase==='SWINGING'){this.rope(craneCenter+e.anchorX,e.hookPivotY,craneCenter+e.hookX,e.hookY);}
       else if(!e.finished){const hx=center+e.anchorX+Math.sin(e.phaseAngle)*10;this.rope(center+e.anchorX,-48,hx,105);}
       if(e.current){const x=craneCenter+e.currentX,y=e.currentY+ground;
         c.save();c.translate(x,y+44);if(e.phase==='GAME_OVER')c.rotate(e.rotation);this.room(e.current.sprite,0,-44);c.restore();
@@ -61,7 +81,8 @@ export class Renderer {
         c.font='bold 23px "Courier New",monospace';c.textAlign='center';c.lineWidth=3;c.strokeStyle='#24314b';c.strokeText('PERFECT',x,y-23);c.fillStyle='#ffdf8b';c.fillText('PERFECT',x,y-23);
       }
       this.label(e.rewardLabel,x,y-3,'#fff0ca',true);
-      if(e.landingFeedback)this.label(e.landingFeedback,x,y+24,e.verdict==='PERFECT'?'#b8ead4':'#ffbf9b',true);
+      const feedback=this.detailedSway?e.detailedMotion.feedback:e.landingFeedback;
+      if(feedback&&(!this.detailedSway||age<.8))this.label(feedback,x,y+24,e.verdict==='PERFECT'?'#b8ead4':'#ffbf9b',true);
     }
     c.restore();
     if(this.effects&&e.phase==='SWINGING'&&e.ddl<=2){const g=c.createRadialGradient(w/2,h/2,Math.min(w,h)*.2,w/2,h/2,Math.max(w,h)*.7);g.addColorStop(0,'#ef434300');g.addColorStop(1,`rgba(220,48,67,${.1+Math.sin(e.time*15)**2*.22})`);c.fillStyle=g;c.fillRect(0,0,w,h);}

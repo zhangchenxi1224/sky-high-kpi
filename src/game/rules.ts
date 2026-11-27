@@ -1,5 +1,5 @@
 import memes from '../config/memePack.json';
-export const RULES = {version:'2026.11.1', width:88, height:88, gravity:1400, ddl:8, perfect:.06, volunteerPerfect:.12, omegaMin:1.2,omegaMax:3.8,towerSway:true};
+export const RULES = {version:'2026.11.3', width:88, height:88, gravity:1400, ddl:8, perfect:.06, volunteerPerfect:.12, omegaMin:1.43,omegaMax:3.905,highPressureOmega:3.135,towerSway:true};
 export type Kind = 'study'|'research'|'competition'|'volunteer'|'practice'|'coffee'|'notes'|'temptation';
 export type KPI = {gpa:number;research:number;competition:number;volunteer:number;practice:number};
 export type Block = {id:string;kind:Kind;name:string;sprite:number;value:number};
@@ -7,19 +7,43 @@ export const emptyKpi=():KPI=>({gpa:0,research:0,competition:0,volunteer:0,pract
 export const clamp=(v:number,a:number,b:number)=>Math.max(a,Math.min(b,v));
 export const round=(v:number)=>Math.round((v+Number.EPSILON)*10000)/10000;
 export const score=(floor:number,k:KPI)=>Math.round(floor*10+k.gpa*100+k.research*30+k.competition*15+k.volunteer*5+k.practice*20);
-export const difficulty=(n:number,rollback=0)=>{const effective=Math.max(1,n-rollback);return {effective,omega:1.2+2.6*(1-Math.exp(-effective/18)),angle:Math.min(48,18+effective*1.1)};};
+export function difficulty(n:number,rollback=0){
+  const effective=Math.max(1,n-rollback);
+  const climbed=effective-1;
+  const omega=RULES.omegaMin+(RULES.omegaMax-RULES.omegaMin)*(1-Math.exp(-climbed/26));
+  const angle=18+27*(1-Math.exp(-climbed/22));
+  return {effective,omega,angle};
+}
 export const judge=(delta:number,kind:Kind)=>Math.abs(delta)<=RULES.width*(kind==='volunteer'?.12:.06)+1e-9?'PERFECT':Math.abs(delta)<=RULES.width*.5+1e-9?'SUCCESS':'MISS';
-export const weights=(n:number)=>{const p=clamp((n-4)/20,0,1);return n<4?[.6,.25,.15,0,0,0]:[.5-.15*p,.2-.08*p,.15-.05*p,.05+.13*p,.05+.1*p,.05+.05*p];};
+const drawKinds=['study','volunteer','practice','research','competition','coffee','notes','temptation'] as const;
+const drawSchedule=[
+  {floor:3,  percent:[60,25,15, 0, 0,0,0,0]},
+  {floor:8,  percent:[48,16,14, 8, 6,4,3,1]},
+  {floor:20, percent:[40,13,12,12,11,5,4,3]},
+  {floor:35, percent:[34,11,12,15,14,5,4,5]},
+];
+export function weights(n:number,boostTemptation=false){
+  const floor=clamp(n,drawSchedule[0].floor,drawSchedule.at(-1)!.floor);
+  const index=drawSchedule.findIndex(row=>row.floor>=floor);
+  const end=drawSchedule[index], start=drawSchedule[Math.max(0,index-1)];
+  const t=index===0?0:(floor-start.floor)/(end.floor-start.floor);
+  const blend=t*t*(3-2*t);
+  const base=start.percent.map((p,i)=>(p+(end.percent[i]-p)*blend)/100);
+  if(!boostTemptation)return base;
+  const temptation=drawKinds.indexOf('temptation');
+  const original=base[temptation], boosted=Math.min(.10,original*2);
+  return base.map((p,i)=>i===temptation?boosted:p*(1-boosted)/(1-original));
+}
 export const seeded=(seed:number)=>()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};
 export const catalog:Block[]=[
-  {id:'study',kind:'study',name:'高数',sprite:0,value:.18},
+  {id:'study',kind:'study',name:'高数',sprite:0,value:.20},
   {id:'linear',kind:'study',name:'线性代数',sprite:0,value:.23},
-  {id:'major',kind:'study',name:'核心专业课',sprite:0,value:.28},
+  {id:'major',kind:'study',name:'核心专业课',sprite:0,value:.26},
   {id:'research',kind:'research',name:'论文室',sprite:1,value:2},
   {id:'research_ddl',kind:'research',name:'顶会 DDL',sprite:1,value:3},
   {id:'research_code',kind:'research',name:'老艺术家手搓代码',sprite:1,value:1},
-  {id:'competition',kind:'competition',name:'竞赛活动室',sprite:2,value:5},
-  {id:'innovation',kind:'competition',name:'国家级大创',sprite:2,value:8},
+  {id:'competition',kind:'competition',name:'竞赛活动室',sprite:2,value:4},
+  {id:'innovation',kind:'competition',name:'国家级大创',sprite:2,value:6},
   {id:'volunteer',kind:'volunteer',name:'志愿服务站',sprite:3,value:4},
   {id:'volunteer_two',kind:'volunteer',name:'综测跑刀鼠鼠',sprite:3,value:2},
   {id:'practice',kind:'practice',name:'社会实践',sprite:4,value:2},
@@ -31,13 +55,13 @@ export const catalog:Block[]=[
 ];
 export function drawBlock(n:number,random:()=>number,highPressure:boolean,recentTemptation:boolean):Block {
   const pick=(list:Block[])=>({...list[Math.min(list.length-1,Math.floor(random()*list.length))]});
-  const boosted=highPressure&&!recentTemptation;
-  if(boosted&&random()<.2)return pick(catalog.filter(b=>b.kind==='temptation'));
-  const kinds:Kind[]=['study','volunteer','practice','research','competition','coffee'];
-  let roll=random();const w=weights(n);let kind:Kind='study';
-  for(let i=0;i<w.length;i++){roll-=w[i];if(roll<=0){kind=kinds[i];break;}}
-  if(kind==='coffee'){const r=random();kind=boosted?(r<.35/.65?'coffee':'notes'):(r<.35?'coffee':r<.65?'notes':'temptation');}
-  return pick(catalog.filter(b=>b.kind===kind));
+  let roll=random();
+  const odds=weights(n,highPressure&&!recentTemptation);
+  let index=0;
+  while(index<odds.length-1&&roll>=odds[index]){
+    roll-=odds[index++];
+  }
+  return pick(catalog.filter(b=>b.kind===drawKinds[index]));
 }
 export function reward(kpi:KPI,block:Block,perfect:boolean,combo:number,practiceBuff:boolean):{kpi:KPI;label:string;multiplier:number}{
   const k={...kpi};
@@ -54,7 +78,7 @@ export function reward(kpi:KPI,block:Block,perfect:boolean,combo:number,practice
   const unit=stat==='volunteer'?'h':'';
   const balanceAfter=(factor:number)=>{
     const value=round(block.value*factor);
-    const gain=stat==='research'&&!perfect?value*.5:value;
+    const gain=stat==='research'&&!perfect?value*.7:value;
     const balance=round(kpi[stat]+gain);
     return stat==='gpa'?clamp(balance,0,4):balance;
   };

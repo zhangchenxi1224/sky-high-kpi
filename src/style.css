@@ -13,3 +13,4 @@
 .welcome-copy{bottom:100%;padding-bottom:clamp(10px,2vh,20px)}
 .welcome-links{top:100%}
 .top-controls .pause-control{min-height:44px}
+.campus-options select{min-height:40px;padding:5px 12px;border:2px solid #344761;border-radius:3px;background:#fff8e9;color:#26344e;font:inherit}
