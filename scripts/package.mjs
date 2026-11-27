@@ -16,9 +16,9 @@ html=html.replace(/<script\b[^>]*src="[^"]+"[^>]*><\/script>/g,'').replace(/<lin
 html=html.replace('</head>',()=>`<style>${style}</style><!-- ${licenses.replaceAll('--','—')} --></head>`);
 html=html.replace('</body>',()=>`<script>window.__ASSETS__=${JSON.stringify(images)};document.documentElement.style.setProperty('--rooms-sprite','url("'+window.__ASSETS__['rooms.webp']+'")');</script><script type="module">${js.replaceAll('</script','<\\/script')}</script></body>`);
 for(const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)){await transform(match[1],{loader:'js',format:'esm'});}
-await writeFile('delivery/绩点卷上天-离线版.html',html);
+await writeFile('delivery/再卷一块砖-离线版.html',html);
 await cp('dist','delivery/web',{recursive:true});
 for(const f of ['README.md','ACCEPTANCE.md','THIRD_PARTY_NOTICES.md']){try{await cp(f,path.join('delivery',f));}catch{}}
-await writeFile('delivery/启动游戏.cmd','@echo off\r\nchcp 65001 >nul\r\nstart "" "%~dp0绩点卷上天-离线版.html"\r\n','utf8');
+await writeFile('delivery/启动游戏.cmd','@echo off\r\nchcp 65001 >nul\r\nstart "" "%~dp0再卷一块砖-离线版.html"\r\n','utf8');
 const size=async(dir)=>{let n=0;for(const f of await readdir(dir,{withFileTypes:true})){const p=path.join(dir,f.name);n+=f.isDirectory()?await size(p):(await stat(p)).size;}return n;};
-console.log(JSON.stringify({webBytes:await size('dist'),offlineHtmlBytes:(await stat('delivery/绩点卷上天-离线版.html')).size,delivery:path.join(root,'delivery')}));
+console.log(JSON.stringify({webBytes:await size('dist'),offlineHtmlBytes:(await stat('delivery/再卷一块砖-离线版.html')).size,delivery:path.join(root,'delivery')}));

@@ -1,4 +1,4 @@
-# 绩点卷上天 · Sky-High KPI
+# 再卷一块砖 | Don't Collapse, MY GPA!
 
 像素校园主题的单命无尽堆叠 H5 游戏：一键松钩，在 6 秒 DDL 里，把大学叠成天空的形状。
 
@@ -11,7 +11,7 @@
 ## 开始玩
 
 - 直接玩：[公开试玩链接](https://sky-high-kpi-merged-20261127.nevilleatkinson25.chatgpt.site)，无需 ChatGPT 登录。
-- 离线玩：从 [Releases](https://github.com/zhangchenxi1224/sky-high-kpi/releases/latest) 下载交付包，解压后打开 `绩点卷上天-离线版.html`；Windows 也可运行 `启动游戏.cmd`。
+- 离线玩：从 [Releases](https://github.com/zhangchenxi1224/sky-high-kpi/releases/latest) 下载交付包，解压后打开 `再卷一块砖-离线版.html`；Windows 也可运行 `启动游戏.cmd`。
 - 本地开发：使用 Node.js 22 或更新版本，执行以下命令。
 
 ```bash

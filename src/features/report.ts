@@ -44,7 +44,8 @@ export function createReportSvg(s:Snapshot,tower:Placed[],qr:string,bird:string,
     <path d="M24 39 L1029 22 L1047 1047 ${teeth} L21 1047 L16 65Z" fill="${cream}" stroke="${ink}" stroke-width="4"/>
     <path d="M22 29 L130 31 L115 93 L32 119Z M67 185 L199 224 L52 227Z M833 185 L1018 237 L945 142Z M31 602 L118 593 L33 758Z M1026 890 L967 1014 L1040 1027Z" fill="url(#dots)" opacity=".75"/>
     <path d="M13 58 L119 8 L133 38 L28 92Z" fill="#ffe38a" stroke="${ink}" stroke-width="3"/>
-    ${text('绩点卷上天 / SKY-HIGH KPI',141,68,27,'font-style="italic"')}
+    ${text('再卷一块砖',141,64,29,'font-style="italic"')}
+    ${text("Don't Collapse, MY GPA!",141,88,19,'font-style="italic"')}
     <path d="M594 40 h153 l-7 36 H587Z" fill="url(#yellow)" stroke="${ink}" stroke-width="2.5"/>
     ${center('校园档案',667,66,25)}
     <path d="M846 58 h147" stroke="#8b99a4" stroke-width="10" stroke-dasharray="14 8"/>

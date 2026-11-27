@@ -20,7 +20,7 @@ export function ResultScreen({snapshot:s,tower,birdGained,onRestart,onHome,onRec
     </div>
     <p className="report-save-hint">手机可长按图片保存</p>
     <div className="report-actions">
-      {poster?<a className="comic-button comic-blue" download={`绩点卷上天-${s.floor}F-${s.score}.png`} href={poster}>保存 PNG</a>:<button className="comic-button comic-blue" disabled>保存 PNG</button>}
+      {poster?<a className="comic-button comic-blue" download={`再卷一块砖-${s.floor}F-${s.score}.png`} href={poster}>保存 PNG</a>:<button className="comic-button comic-blue" disabled>保存 PNG</button>}
       <button className="comic-button comic-gold" onClick={onRestart}>重开大学</button>
     </div>
     <div className="report-links"><button onClick={onHome}>回首页喂小鸟</button><span>·</span><button onClick={onRecords}>成绩榜</button>{s.mode==='fixed'&&<><span>·</span><a href={randomUrl}>去随机试玩</a></>}</div>

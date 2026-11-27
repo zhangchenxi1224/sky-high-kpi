@@ -36,18 +36,18 @@ def run(text, x, y, width, height, spacing=0):
         cursor += glyphs[name].width + spacing
     return ' '.join(paths)
 
-cn = run('绩点卷上天', 85, 24, 730, 139)
-en = run('SKY-HIGH KPI', 184, 207, 532, 43, 35)
+cn = run('再卷一块砖', 85, 24, 730, 139)
+en = run("Don't Collapse, MY GPA!", 82, 207, 736, 43, 25)
 svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="900" height="280" viewBox="0 0 900 280">
-<title>绩点卷上天 · SKY-HIGH KPI</title>
+<title>再卷一块砖 | Don't Collapse, MY GPA!</title>
 <!-- Glyph outlines: Ark Pixel Font 12px, 2026.11.10, SIL OFL 1.1. -->
 <defs><linearGradient id="gold" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#fff6ad"/><stop offset=".12" stop-color="#ffe98d"/><stop offset=".18" stop-color="#ffdc42"/><stop offset=".73" stop-color="#ffcf25"/><stop offset="1" stop-color="#e9a218"/></linearGradient><path id="cn" d="{cn}"/><path id="en" d="{en}"/></defs>
 <g stroke-linejoin="miter">
 <g transform="translate(1 12)" fill="#17223e" stroke="#17223e" stroke-width="19"><use href="#cn"/><use href="#en"/></g>
 <g fill="url(#gold)" stroke="#17223e" stroke-width="15" paint-order="stroke"><use href="#cn"/><use href="#en"/></g>
 <g fill="url(#gold)" stroke="url(#gold)" stroke-width="5" paint-order="stroke"><use href="#cn"/><use href="#en"/></g>
-<path d="M65 218h91v21H65Z M745 218h91v21H745Z" fill="url(#gold)" stroke="#17223e" stroke-width="10"/>
-<path d="M68 221h85 M749 221h83" stroke="#fff8bd" stroke-width="4"/>
+<path d="M17 218h40v21H17Z M844 218h40v21H844Z" fill="url(#gold)" stroke="#17223e" stroke-width="10"/>
+<path d="M20 221h34 M848 221h33" stroke="#fff8bd" stroke-width="4"/>
 </g></svg>'''
 Path('public/assets/title.svg').write_text(svg, encoding='utf-8')
 Path('public/ARK_PIXEL_OFL.txt').write_bytes(archive.read('OFL.txt'))
