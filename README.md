@@ -25,7 +25,7 @@ npm run dev
 
 | 命令 | 用途 |
 | --- | --- |
-| `npm test` | 运行 54 项规则、状态机、Buff 展示和成绩卡测试 |
+| `npm test` | 运行 66 项规则、状态机、反馈、转场、音频和成绩卡测试 |
 | `npm run build` | TypeScript 检查并构建静态站到 `dist/` |
 | `npm run preview` | 本地预览生产构建 |
 | `npm run delivery` | 从已构建的 `dist/` 生成离线 HTML、启动器、静态包和说明 |
@@ -47,6 +47,17 @@ npm run dev
 - 黄蓝漫画成绩卡与导出的 PNG 共用真实塔形、雷达图、称号、二维码及小鸟；移除免责声明、SEED 和局模式文字。
 - 美术入口：`src/ui/MetricIcon.tsx`、`src/ui/hud.css`、`src/ui/screens.css`、`src/features/report.ts`。状态展示数据：`GameEngine.snapshot().statuses`。
 
+## 像素反馈与音乐（2026-11-28）
+
+- COMBO 移到右上天空并逆时针倾斜 10°：480ms 四帧爆发后保持 42% 水印，再次 PERFECT 原位累加；普通成功或落空以灰蓝碎片退场。×4 火花、×7 FEVER 与弹幕升级；沿用课业完美 +2、其他完美 +1 的规则。
+- 两行 HUD 保留学士帽与四维图标，压缩外框；Buff 在框外纵排，短文本显示百分比和剩余次数，悬停可查看完整说明。砖块标签、收益浮字和控制钮统一像素字体与硬边框。
+- 开始按钮触发 800ms 黄色像素溶解；转场期间 DDL 不消耗。关闭特效或开启系统减少动态时使用 160ms 简化转场。
+- 用户提供的 MP3 位于 `public/assets/campus-bgm.mp3`，点击后以 32% 音量循环，暂停 / 切后台停止，继续时续播；沿用音乐偏好开关。音效保持独立控制。
+- 按最新意见保留原版吊钩几何、摆动、镜头和漫画结算卡；保留托管源码已有的 20 套称号更新。
+- 开始游戏、点击松钩和 GPA 标签 / 数值使用加粗像素字，保持窄 HUD 布局。
+- 全部源码文案通过字体覆盖校验，修复“跳过诱惑”的缺字；以后新增未覆盖字符会使测试失败，避免漏字进入交付包。
+- 像素字体使用本地 Fusion Pixel 子集（保持 Ark 基础字形，补全缺字），离线包同时内嵌字体和音乐；更新文字时用 `scripts/build-pixel-font.py` 重新生成字体子集。
+
 ## 本次合并（2026-11-27）
 
 来源：GitHub test `b3537c4` + main `7ae745e` + 用户提供的微信试玩包。详细取舍与源码位置见 [合并说明](docs/merge-20261127.md)。
@@ -63,9 +74,9 @@ npm run dev
 - PERFECT 为 6%，志愿砖 12%；中心偏差 ≤50% 落稳，超出落空。完美仅吸附最多 2 单位，保留真实歪楼。
 - 6 秒 DDL、最后 2 秒边缘红光/心跳预警、到期强制提交。
 - 随有效层数连续增加的吊车摆速与摆幅、六大类收益、所有 Buff、五款可接受/跳过的诱惑皮肤。
-- 实时楼层 / GPA / 综测、连击、收益浮字、金色粒子、落地挤压、合成音乐及音效。
+- 实时楼层 / GPA / 综测、连击、收益浮字、金色粒子、落地挤压、循环背景音乐及合成音效。
 - 操场地基、楼顶天际线、日落、深空渐变；手机竖屏与桌面横屏自适应。
-- 本机成绩榜、十二套称号与四种社交属性、1080×1080 PNG 结业海报（真实塔形、五维雷达图、红章、二维码），可下载或移动端长按保存。
+- 本机成绩榜、二十套称号与四种社交属性、1080×1080 PNG 结业海报（真实塔形、五维雷达图、红章、二维码），可下载或移动端长按保存。
 - React + Vite + TypeScript + Canvas + Zustand + Tailwind CSS + ZzFX + qrcode，无后端、无追踪脚本。
 
 ## 规则补充与解释
@@ -94,7 +105,7 @@ npm run dev
 | `src/features/poster.ts` | 离屏高清海报与真实塔形 |
 | `src/features/bird.ts` / `src/ui/BirdCompanion.tsx` | 小鸟口粮存储、气泡定位、飞行与喂食 |
 | `public/assets/fitness.webp` / `public/assets/bird-*.webp` | 微信包原始体测与小鸟素材 |
-| `src/features/audio.ts` | 手势后初始化 ZzFX，五声音阶反馈和轻量配乐 |
+| `src/features/audio.ts` | 手势后播放本地 MP3，暂停续播与 ZzFX 音效 |
 | `art/rooms-original.png` | 用户工作区已有的双窗楼块原始透明精灵 |
 | `public/assets/rooms.webp` | 像素内容无损等价编码，减少下载体积 |
 | `tests/game.test.ts` | 数值与状态机验收测试 |

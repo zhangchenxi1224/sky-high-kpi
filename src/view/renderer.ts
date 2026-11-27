@@ -1,6 +1,8 @@
 import {GameEngine} from '../game/engine';
 import {RULES,seeded} from '../game/rules';
 import {assetUrl} from '../features/assets';
+import {pixelFont} from '../features/pixel-font';
+import {metricColors,snap} from './layout';
 type Rect={x:number;y:number;w:number;h:number};
 const mix=(a:string,b:string,t:number)=>{const ca=parseInt(a.slice(1),16),cb=parseInt(b.slice(1),16);return `rgb(${[16,8,0].map(s=>Math.round(((ca>>s)&255)*(1-t)+((cb>>s)&255)*t)).join(',')})`;};
 export class Renderer {
@@ -28,6 +30,8 @@ export class Renderer {
   rect(r:Rect,color:string){this.ctx.fillStyle=color;this.ctx.fillRect(Math.round(r.x),Math.round(r.y),Math.round(r.w),Math.round(r.h));}
   render(e:GameEngine){
     const c=this.ctx,w=this.width,h=this.height;this.drawSky(e);c.save();
+    const comboAge=e.time-e.comboCue.at;
+    if(this.effects&&!this.reducedMotion.matches&&!e.comboCue.broken&&e.comboCue.value>=4&&comboAge<.24)c.translate((Math.floor(comboAge/.06)%2?2:-2)/this.scale,0);
     const zoom=e.viewZoom;
     c.scale(zoom,zoom);
     const center=w/(2*zoom)-e.cameraX;
@@ -75,30 +79,53 @@ export class Renderer {
       if(e.current){const x=craneCenter+e.currentX,y=e.currentY+ground;
         c.save();c.translate(x,y+44);if(e.phase==='GAME_OVER')c.rotate(e.rotation);this.room(e.current.sprite,0,-44);c.restore();
         if(e.phase==='SWINGING'){
-          this.label(e.current.name,x+58,y+37,'#fff4da');
-          if(e.coffeeRemaining>0){
-            const seconds=(Math.ceil(e.coffeeRemaining*10)/10).toFixed(1);
-            this.label(`☕ 减速 45% · ${seconds}s`,x,y+108,'#c6efed',true);
-          }
+          this.blockLabel(e.current.name,x,y,metricColors[e.current.kind],e.current.kind==='temptation');
         }
       }
     }
     const age=e.time-e.lastLandTime;
-    if(age<1.2&&e.floor>0){const x=center+roofSway+e.topX,y=e.topY+ground-19-age*12;
+    if(age<1&&e.floor>0){const x=center+roofSway+e.topX,y=e.topY+ground-20;
       if(e.verdict==='PERFECT'){
-        if(this.effects){c.globalAlpha=Math.max(0,1-age/1);for(let i=0;i<12;i++){const a=i/12*Math.PI*2,r=45+age*65;c.fillStyle=i%2?'#fff9dc':'#ffe28a';c.fillRect(x+Math.cos(a)*r-2,y+58+Math.sin(a)*r-2,4,4);}c.globalAlpha=1;}
-        c.font='bold 23px "Courier New",monospace';c.textAlign='center';c.lineWidth=3;c.strokeStyle='#24314b';c.strokeText('PERFECT',x,y-23);c.fillStyle='#ffdf8b';c.fillText('PERFECT',x,y-23);
+        if(motionEnabled){c.globalAlpha=Math.max(0,1-age/1);for(let i=0;i<12;i++){const a=i/12*Math.PI*2,r=45+age*65;c.fillStyle=i%2?'#fff9dc':'#ffe28a';c.fillRect(x+Math.cos(a)*r-2,y+58+Math.sin(a)*r-2,4,4);}c.globalAlpha=1;}
+        this.pixelText('PERFECT',x,y-28,'#FFD43B',24);
       }
-      this.label(e.rewardLabel,x,y-3,'#fff0ca',true);
+      const last=e.tower.at(-1)!,negative=last.block.kind==='temptation';
+      const step=Math.min(7,Math.floor(age/.8*8)),travel=step*4;
+      if(age<.8)this.pixelText(e.rewardLabel,x+(negative&&step%2?2:0),y+(negative?travel*.5:-travel),metricColors[last.block.kind],16);
       const feedback=this.detailedSway?e.detailedMotion.feedback:e.landingFeedback;
-      if(feedback&&(!this.detailedSway||age<.8))this.label(feedback,x,y+24,e.verdict==='PERFECT'?'#b8ead4':'#ffbf9b',true);
+      if(feedback&&(!this.detailedSway||age<.8))this.pixelText(feedback,x,y+24,e.verdict==='PERFECT'?'#92E8AF':'#FFA94D',12);
     }
     c.restore();
     if(this.effects&&e.phase==='SWINGING'&&e.ddl<=2){const g=c.createRadialGradient(w/2,h/2,Math.min(w,h)*.2,w/2,h/2,Math.max(w,h)*.7);g.addColorStop(0,'#ef434300');g.addColorStop(1,`rgba(220,48,67,${.1+Math.sin(e.time*15)**2*.22})`);c.fillStyle=g;c.fillRect(0,0,w,h);}
   }
   room(sprite:number,x:number,y:number,sy=1){const c=this.ctx;c.imageSmoothingEnabled=false;const image=this.sprites[sprite];if(image)c.drawImage(image,Math.round(x-44),Math.round(y+88*(1-sy)),88,88*sy);else{c.fillStyle='#e8c28f';c.fillRect(x-44,y,88,88);c.fillStyle='#30445f';c.fillRect(x-34,y+18,28,52);c.fillRect(x+6,y+18,28,52);}}
   rope(px:number,py:number,x:number,y:number){const c=this.ctx;c.strokeStyle='#233047';c.lineWidth=2;c.beginPath();c.moveTo(Math.round(px),py);c.lineTo(Math.round(x),Math.round(y));c.stroke();c.fillStyle='#e2c89e';c.fillRect(x-2,y-3,4,7);c.strokeRect(x-2,y-3,4,7);c.beginPath();c.moveTo(x,y+7);c.lineTo(x-31,y+28);c.moveTo(x,y+7);c.lineTo(x+31,y+28);c.stroke();}
-  label(text:string,x:number,y:number,color:string,center=false){const c=this.ctx;c.font='bold 14px "Microsoft YaHei",sans-serif';const tw=c.measureText(text).width;let left=center?x-tw/2-6:x;const visibleWidth=this.canvas.width/c.getTransform().a;left=Math.max(7,Math.min(visibleWidth-tw-19,left));c.fillStyle=color;c.fillRect(left,y-15,tw+12,23);c.fillStyle='#263049';c.textAlign='left';c.fillText(text,left+6,y+2);}
+  pixelText(text:string,x:number,y:number,color:string,size=16){
+    const c=this.ctx,t=c.getTransform(),dpr=Math.min(devicePixelRatio||1,2),visibleWidth=this.canvas.width/dpr;
+    x=(t.a*x+t.e)/dpr;y=(t.d*y+t.f)/dpr;c.save();c.setTransform(dpr,0,0,dpr,0,0);
+    c.font=pixelFont(size);const width=c.measureText(text).width;
+    if(width>visibleWidth-24){size=Math.max(10,Math.floor(size*(visibleWidth-24)/width));c.font=pixelFont(size);}
+    const half=c.measureText(text).width/2;x=snap(Math.max(half+8,Math.min(visibleWidth-half-8,x)));y=snap(y);
+    c.textAlign='center';c.lineJoin='miter';c.lineWidth=4;c.strokeStyle='#10172C';c.strokeText(text,x,y+2);c.strokeText(text,x,y);c.fillStyle=color;c.fillText(text,x,y);c.restore();
+  }
+  blockLabel(text:string,x:number,y:number,color:string,temptation:boolean){
+    const c=this.ctx,t=c.getTransform(),dpr=Math.min(devicePixelRatio||1,2),roomScale=t.a/dpr,fontSize=12;
+    x=(t.a*x+t.e)/dpr;y=(t.d*y+t.f)/dpr;c.save();c.setTransform(dpr,0,0,dpr,0,0);c.font=pixelFont(fontSize);c.textAlign='left';
+    const width=snap(c.measureText(text).width)+20+(temptation?12:0),height=24,screenWidth=this.canvas.width/dpr;
+    let left=snap(x+44*roomScale+10),top=snap(y+26*roomScale),arrow:'left'|'right'='left';
+    if(left+width>screenWidth-8){left=snap(Math.max(8,x-44*roomScale-10-width));arrow='right';}
+    const fill=temptation?'#38132A':'#151D33',edge=temptation?'#FF59B4':color;
+    const box=(xx:number,yy:number,ww:number,hh:number,ink:string)=>{c.fillStyle=ink;c.fillRect(xx+4,yy,ww-8,hh);c.fillRect(xx,yy+4,ww,hh-8);c.fillRect(xx+2,yy+2,ww-4,hh-4);};
+    box(left+2,top+2,width,height,'#000000');box(left,top,width,height,edge);box(left+2,top+2,width-4,height-4,fill);
+    if(arrow==='left'){
+      for(let i=0;i<3;i++){c.fillStyle=edge;c.fillRect(left-6+i*2,top+12-i*2,2,4+i*4);}c.fillStyle=fill;c.fillRect(left-2,top+10,4,8);
+    }else{
+      for(let i=0;i<3;i++){c.fillStyle=edge;c.fillRect(left+width+i*2,top+8+i*2,2,12-i*4);}c.fillStyle=fill;c.fillRect(left+width-2,top+10,4,8);
+    }
+    let tx=left+10;
+    if(temptation){c.fillStyle='#FFD43B';c.fillRect(tx+2,top+8,4,4);c.fillRect(tx+2,top+14,4,2);tx+=12;}
+    c.fillStyle='#FFF9DB';c.fillText(text,tx,top+18);c.restore();
+  }
   drawSky(e:GameEngine){
     const w=this.width,h=this.height,c=this.ctx,alt=Math.min(1,e.floor/55),night=this.night?1:Math.max(0,(e.floor-22)/32);const k=`${Math.round(w)}-${Math.round(h)}-${Math.floor(e.cameraY/22)}-${this.night}`;
     if(k!==this.skyKey){this.skyKey=k;const bg=document.createElement('canvas');bg.width=Math.ceil(w/2);bg.height=Math.ceil(h/2);const b=bg.getContext('2d')!;b.scale(.5,.5);
@@ -135,6 +162,6 @@ export class Renderer {
     c.fillStyle='#aebbcf';c.fillRect(0,y-102,w,4);c.fillStyle='#46516c';c.fillRect(0,y-22,w,13);c.fillStyle='#edbc57';for(let x=0;x<w;x+=30){c.beginPath();c.moveTo(x,y-22);c.lineTo(x+16,y-22);c.lineTo(x+4,y-9);c.lineTo(x-12,y-9);c.fill();}
     c.fillStyle='#2b344c';c.fillRect(center-65,y-8,130,14);c.fillStyle='#947e77';c.fillRect(center-61,y-7,122,9);c.fillStyle='#dfc69e';c.fillRect(center-60,y-8,120,3);
     for(const cx of [Math.max(45,center-190),Math.min(w-45,center+190)]){c.fillStyle='#313e5a';c.fillRect(cx-18,y-1,36,6);c.fillStyle='#ef9e4f';c.beginPath();c.moveTo(cx-12,y-1);c.lineTo(cx-4,y-53);c.lineTo(cx+4,y-53);c.lineTo(cx+12,y-1);c.fill();c.fillStyle='#fff0d4';c.fillRect(cx-5,y-38,10,7);c.fillRect(cx-8,y-19,16,8);}
-    const sx=Math.max(46,center-235);c.fillStyle='#24344f';c.fillRect(sx-26,y-83,52,57);c.fillStyle='#f5c665';c.fillRect(sx-23,y-80,46,51);c.fillStyle='#263249';c.font='bold 17px "Microsoft YaHei"';c.textAlign='center';c.fillText('校园',sx,y-60);c.fillText('施工',sx,y-39);
+    const sx=Math.max(46,center-235);c.fillStyle='#24344f';c.fillRect(sx-26,y-83,52,57);c.fillStyle='#f5c665';c.fillRect(sx-23,y-80,46,51);c.fillStyle='#263249';c.font=pixelFont(18);c.textAlign='center';c.fillText('校园',sx,y-60);c.fillText('施工',sx,y-39);
   }
 }

@@ -114,9 +114,9 @@
 }
 .bird-crumbs i {
   background: #e5a136;
-  border: 1px solid #7d4b20;
-  width: 5px;
-  height: 5px;
+  border: 2px solid #7d4b20;
+  width: 6px;
+  height: 6px;
   animation: .68s ease-out both bird-crumb;
   position: absolute;
 }
@@ -130,11 +130,11 @@
 }
 .bird-chat {
   z-index: 9;
-  color: #26334e;
+  color: #fff9db;
   text-align: left;
   pointer-events: none;
-  background: #fff1c5;
-  border: 3px solid #24324b;
+  background: #151d33;
+  border: 2px solid #ffe066;
   width: min(228px, 100vw - 24px);
   margin: 0;
   padding: 8px 9px 7px;
@@ -151,83 +151,23 @@
   opacity: 1;
   pointer-events: auto;
 }
-.bird-chat:before {
-  content: "";
-  background: #fff1c5;
-  width: 10px;
-  height: 10px;
-  position: absolute;
-}
-.bird-chat.dir-right:before {
-  border-bottom: 3px solid #24324b;
-  border-left: 3px solid #24324b;
-  top: calc(50% - 5px);
-  left: -8px;
-  transform: rotate(45deg);
-}
-.bird-chat.dir-left:before {
-  border-top: 3px solid #24324b;
-  border-right: 3px solid #24324b;
-  top: calc(50% - 5px);
-  right: -8px;
-  transform: rotate(45deg);
-}
-.bird-chat.dir-top:before {
-  border-bottom: 3px solid #24324b;
-  border-right: 3px solid #24324b;
-  bottom: -8px;
-  left: calc(50% - 5px);
-  transform: rotate(45deg);
-}
-.bird-chat.dir-bottom:before {
-  border-top: 3px solid #24324b;
-  border-left: 3px solid #24324b;
-  top: -8px;
-  left: calc(50% - 5px);
-  transform: rotate(45deg);
-}
-.bird-chat.dir-top-left:before {
-  border-bottom: 3px solid #24324b;
-  border-right: 3px solid #24324b;
-  bottom: -8px;
-  right: 13px;
-  transform: rotate(45deg);
-}
-.bird-chat.dir-top-right:before {
-  border-bottom: 3px solid #24324b;
-  border-left: 3px solid #24324b;
-  bottom: -8px;
-  left: 13px;
-  transform: rotate(45deg);
-}
-.bird-chat.dir-bottom-left:before {
-  border-top: 3px solid #24324b;
-  border-right: 3px solid #24324b;
-  top: -8px;
-  right: 13px;
-  transform: rotate(45deg);
-}
-.bird-chat.dir-bottom-right:before {
-  border-top: 3px solid #24324b;
-  border-left: 3px solid #24324b;
-  top: -8px;
-  left: 13px;
-  transform: rotate(45deg);
-}
+.bird-chat:before{content:"";position:absolute;width:8px;height:12px;background:#ffe066;clip-path:polygon(6px 0,8px 0,8px 12px,6px 12px,6px 10px,4px 10px,4px 8px,2px 8px,2px 6px,4px 6px,4px 4px,6px 4px)}
+.bird-chat.dir-right:before{left:-8px;top:40%}.bird-chat.dir-left:before{right:-8px;top:40%;transform:scaleX(-1)}
+.bird-chat[class*="dir-top"]:before{bottom:-8px;left:14px;transform:rotate(-90deg)}.bird-chat[class*="dir-bottom"]:before{top:-8px;left:14px;transform:rotate(90deg)}
 .bird-chat p {
   letter-spacing: 0;
   min-height: 30px;
-  font-size: 11px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 400;
   line-height: 1.5;
 }
 .bird-food {
-  border-top: 2px dashed #b9a367;
+  border-top: 2px solid #526b8d;
   align-items: center;
   gap: 6px;
   margin-top: 7px;
   padding-top: 7px;
-  font: 800 10px/1 Courier New, monospace;
+  font: 400 12px/1 CampusPixel, monospace;
   display: flex;
 }
 .bird-grains {
@@ -239,9 +179,9 @@
 .bird-grains i {
   clip-path: polygon(50% 0, 100% 45%, 75% 100%, 25% 100%, 0 45%);
   background: #d8cba8;
-  border: 1px solid #786438;
-  width: 7px;
-  height: 9px;
+  border: 2px solid #786438;
+  width: 8px;
+  height: 10px;
 }
 .bird-grains i.full {
   background: #e7ad43;
@@ -251,13 +191,13 @@
   pointer-events: auto;
   min-height: 25px !important;
   padding: 2px 7px !important;
-  font: 800 10px/1 Courier New, monospace !important;
+  font: 400 12px/1 CampusPixel, monospace !important;
   box-shadow: 2px 2px #24324b !important;
 }
 .bird-chat small {
-  color: #6e7280;
+  color: #b7c8e0;
   margin-top: 6px;
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.3;
   display: block;
 }
@@ -283,7 +223,7 @@
   background: #e4efd7;
   border: 2px solid #557565;
   padding: 8px 10px;
-  font-weight: 800;
+  font-weight: 400;
   color: #3f6653 !important;
 }
 .pixel-modal .result-links {
@@ -295,7 +235,7 @@
 }
 .pixel-modal .result-links .text-link {
   margin: 0;
-  font-size: 11px;
+  font-size: 12px;
 }
 @media (max-width: 600px) {
   .game-shell .welcome .bird-companion {
@@ -347,7 +287,7 @@
   }
   .bird-feed {
     padding: 2px 5px !important;
-    font-size: 9px !important;
+    font-size: 10px !important;
   }
   .bird-chat small {
     font-size: 8px;

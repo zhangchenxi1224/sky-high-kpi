@@ -10,6 +10,8 @@ import {earnBirdFood,feedBird,loadBirdDay,saveBirdDay} from '../features/bird';
 import {assetUrl} from '../features/assets';
 import {GameHud} from './GameHud';
 import {MetricIcon} from './MetricIcon';
+import {ComboOverlay} from './ComboOverlay';
+import {PixelDissolve} from './PixelDissolve';
 import './screens.css';
 import './hud.css';
 const query=new URLSearchParams(location.search);
@@ -43,6 +45,9 @@ export function App(){
   const [s,setS]=useState(engine.current.snapshot()),[panel,setPanel]=useState<'campus'|'rules'|'records'|null>(null);
   const autoRef=useRef(false);const [auto,setAuto]=useState(false),[fps,setFps]=useState(0);
   const prefs=usePreferences(),[assetReady,setAssetReady]=useState(false);const best=prefs.records[0];
+  const [transitioning,setTransitioning]=useState(false),transitionRef=useRef(false);
+  const [reducedMotion,setReducedMotion]=useState(()=>matchMedia('(prefers-reduced-motion: reduce)').matches);
+  useEffect(()=>{const media=matchMedia('(prefers-reduced-motion: reduce)'),update=()=>setReducedMotion(media.matches);media.addEventListener('change',update);return()=>media.removeEventListener('change',update);},[]);
   const [birdDay,setBirdDay]=useState(()=>loadBirdDay()),[feeding,setFeeding]=useState(false),[birdFlyaway,setBirdFlyaway]=useState(false),[birdGained,setBirdGained]=useState(0);
   const birdTimers=useRef<number[]>([]);
   useEffect(()=>()=>birdTimers.current.forEach(window.clearTimeout),[]);
@@ -55,13 +60,14 @@ export function App(){
     refresh();
   };
   const drop=()=>{
+    if(transitionRef.current)return;
     if(!engine.current.drop())return;
     (document.activeElement as HTMLElement|null)?.blur();
     refresh();
   };
   const restart=()=>{
     const game=new GameEngine(Number(query.get('seed'))||Date.now()>>>0,mode);
-    game.setViewport(renderer.current?.width??960,renderer.current?.height??720);
+    renderer.current?.resize(innerWidth,innerHeight,game);
     engine.current=game;
     attach(game);
 
@@ -71,7 +77,7 @@ export function App(){
   };
   const returnHome=()=>{
     const game=new GameEngine(Number(query.get('seed'))||Date.now()>>>0,mode);
-    game.setViewport(renderer.current?.width??960,renderer.current?.height??720);
+    renderer.current?.resize(innerWidth,innerHeight,game);
     engine.current=game;attach(game);setPanel(null);setBirdDay(loadBirdDay());setBirdGained(0);
     autoRef.current=false;setAuto(false);refresh();
   };
@@ -97,6 +103,7 @@ export function App(){
     const tick=(now:number)=>{const delta=Math.min(.1,(now-previous)/1000);previous=now;frameCount++;if(now-fpsTime>=1000){setFps(Math.round(frameCount*1000/(now-fpsTime)));fpsTime=now;frameCount=0;}const game=engine.current;game.update(delta,autoRef.current&&game.mode==='fixed'?demoDropReady:undefined);r.render(game);if(now-lastHud>60){setS(game.snapshot());lastHud=now;}if(r.assetsReady)setAssetReady(true);raf=requestAnimationFrame(tick);};raf=requestAnimationFrame(tick);
     const hidden=()=>{if(document.hidden){if(engine.current.phase!=='READY'&&!engine.current.finished)engine.current.paused=true;sound.current.paused=true;refresh();}};document.addEventListener('visibilitychange',hidden);
     const key=(event:KeyboardEvent)=>{
+      if(transitionRef.current){event.preventDefault();return;}
       if(event.repeat)return;
       const dialogs=document.querySelectorAll('[role="dialog"]');
       if(event.code==='Escape'&&(!dialogs.length||dialogs[0].getAttribute('aria-labelledby')==='pause-title')){
@@ -118,9 +125,10 @@ export function App(){
   const openPanel=(p:typeof panel)=>{if(engine.current.phase!=='READY'&&!engine.current.finished)engine.current.paused=true;setPanel(p);refresh();};
   const closePanel=()=>{setPanel(null);engine.current.paused=false;refresh();};
   const active=s.phase==='SWINGING';const preview=s.phase==='READY';
-  return <main className={`game-shell ${preview?'is-home':''} ${s.finished?'is-finished':''} ${s.paused?'is-paused':''}`} aria-label="Don't Collapse, MY GPA!">
+  return <main className={`game-shell ${preview?'is-home':''} ${s.finished?'is-finished':''} ${s.paused?'is-paused':''} ${transitioning?'is-transitioning':''}`} aria-label="Don't Collapse, MY GPA!">
     <canvas ref={canvas} className="game-canvas" onPointerDown={preview?undefined:drop} aria-label="游戏画面：点击或按空格松钩"/>
     <GameHud s={s}/>
+    <ComboOverlay s={s} effects={prefs.effects} reducedMotion={reducedMotion}/>
     <nav className="top-controls" aria-label="游戏设置">
       {!preview&&s.phase!=='GAME_OVER'&&<button className="pixel-button gold pause-control" onClick={()=>{engine.current.togglePause();refresh();}}>Ⅱ 暂停</button>}
       <button className={`pixel-button red ${prefs.music?'':'muted'}`} aria-pressed={prefs.music} onClick={()=>{void sound.current.unlock();prefs.toggle('music');}}><span>♫</span> 音乐{prefs.music?'':' ×'}</button>
@@ -130,7 +138,7 @@ export function App(){
     {mode==='fixed'&&!s.finished&&<><button className="demo-button" aria-pressed={auto} onClick={()=>{autoRef.current=!autoRef.current;setAuto(autoRef.current);if(preview)engine.current.start();refresh();}}>{auto?'关闭自动演示':swayDemo?'演示搭偏与回稳':'自动演示全部砖块'}</button><output className="fps-readout">{fps} FPS · DPR {Number(Math.min(devicePixelRatio,2).toFixed(2))}</output></>}
     {preview&&<section className="welcome arcade-home" aria-label="开始游戏">
       <div className="welcome-copy"><h1><img className="game-logo" src={assetUrl('title.svg')} alt="Don't Collapse, MY GPA!"/></h1></div>
-      <div className="home-start"><button className="arcade-button start-game" onClick={start} disabled={!assetReady}><span aria-hidden="true">▶</span>{assetReady?'开始游戏':'加载中…'}</button>
+      <div className="home-start"><button className="arcade-button start-game" onClick={()=>{if(transitionRef.current)return;void sound.current.unlock();transitionRef.current=true;setTransitioning(true);}} disabled={!assetReady||transitioning}><span aria-hidden="true">▶</span>{assetReady?'开始游戏':'加载中…'}</button>
         {best&&<div className="best-note">BEST {best.floor}F · {String(best.score).padStart(5,'0')}</div>}
         {mode==='fixed'&&<div className="welcome-links"><a className="text-link play-random" href={randomPlayUrl.href}>去随机试玩</a></div>}
       </div>
@@ -138,19 +146,21 @@ export function App(){
     </section>}
     {birdFlyaway&&<div className="bird-flyaway" aria-hidden="true"><img src={assetUrl('bird-fly.webp')} alt=""/></div>}
     {!preview&&s.message&&s.elapsed<s.messageUntil&&!s.finished&&<div className="danmaku" role="status" key={s.message}>{s.message}</div>}
+    {!preview&&!s.finished&&s.elapsed-s.feverAt<3.2&&s.combo>=7&&<div className="danmaku fever-danmaku" key={`fever-${s.feverAt}`} aria-hidden="true">夯爆了！×{s.combo}</div>}
     <div className={`ddl-meter ${active&&s.ddl<=2?'urgent':''}`} aria-label={`DDL 剩余 ${active?Math.ceil(s.ddl):0} 秒`}><span className="ddl-title pixel-label">DDL</span><div className="ddl-clock">{active?<>{Math.ceil(s.ddl)}<small>s</small></>:'−'}</div><div className="ddl-track"><div style={{height:active?`${s.ddl/RULES.ddl*100}%`:'0%'}}/><i/><i/><i/></div></div>
     <div className="bottom-actions">
       {active&&s.current?.kind==='temptation'&&<button className="pixel-button red skip" onPointerDown={event=>{event.preventDefault();event.stopPropagation();engine.current.skipCurrentBlock();refresh();}} onClick={event=>{if(event.detail===0){engine.current.skipCurrentBlock();refresh();}}}>» 跳过诱惑</button>}
       {!preview&&!s.finished&&<button className="pixel-button blue drop" disabled={!active||s.paused} onPointerDown={event=>{event.preventDefault();drop();}} onClick={event=>{if(event.detail===0)drop();}}>{active?'↓ 点击松钩':s.phase==='GAME_OVER'?'下把再来':'漂亮！'}</button>}
     </div>
     <div className="score-panel ink-panel" aria-label={`综测总分 ${s.score}`}><MetricIcon kind="gpa"/><strong>{String(s.score).padStart(5,'0')}</strong><span>综测</span></div>
-    {s.paused&&!panel&&!s.finished&&<div className="modal-backdrop"><section className="pixel-modal compact" role="dialog" aria-modal="true" aria-labelledby="pause-title"><span className="modal-eyebrow pixel-label">TAKE A BREATH</span><h2 id="pause-title">课间休息</h2><p>DDL 和吊车已暂停，喝口水再继续。</p><div className="result-buttons"><button className="pixel-button blue" autoFocus onClick={()=>{engine.current.paused=false;void sound.current.unlock();refresh();}}>继续卷楼</button><button className="pixel-button gold" onClick={restart}>重新开局</button></div></section></div>}
+    {s.paused&&!transitioning&&!panel&&!s.finished&&<div className="modal-backdrop"><section className="pixel-modal compact" role="dialog" aria-modal="true" aria-labelledby="pause-title"><span className="modal-eyebrow pixel-label">TAKE A BREATH</span><h2 id="pause-title">课间休息</h2><p>DDL 和吊车已暂停，喝口水再继续。</p><div className="result-buttons"><button className="pixel-button blue" autoFocus onClick={()=>{engine.current.paused=false;void sound.current.unlock();refresh();}}>继续卷楼</button><button className="pixel-button gold" onClick={restart}>重新开局</button></div></section></div>}
     {s.finished&&!panel&&<ResultScreen snapshot={s} tower={engine.current.tower} birdGained={birdGained} onRestart={restart} onHome={returnHome} onRecords={()=>openPanel('records')} randomUrl={randomPlayUrl.href}/>}
     {panel&&<div className="modal-backdrop"><section className="pixel-modal campus-modal" role="dialog" aria-modal="true" aria-labelledby="campus-title"><button className="close" aria-label="关闭窗口" onClick={closePanel}>×</button><span className="modal-eyebrow pixel-label">CAMPUS NOTICEBOARD</span><h2 id="campus-title">{panel==='rules'?'新生入学指南':panel==='records'?'本机成绩榜':'校园公告栏'}</h2><div className="tabs pixel-tabs"><button className={panel==='campus'?'selected':''} onClick={()=>setPanel('campus')}>本局账本</button><button className={panel==='rules'?'selected':''} onClick={()=>setPanel('rules')}>玩法指南</button><button className={panel==='records'?'selected':''} onClick={()=>setPanel('records')}>成绩榜</button></div>
       {panel==='campus'&&<><StatGrid s={s}/><div className="campus-options"><span>校园景色</span><button className="pixel-button blue" onClick={()=>prefs.toggle('night')}>{prefs.night?'星空校区':'日落校区'}</button></div><div className="campus-options"><label htmlFor="sway-style">楼体摇晃</label><select id="sway-style" value={prefs.detailedSway?'detailed':'classic'} onChange={()=>prefs.toggle('detailedSway')}><option value="detailed">细腻</option><option value="classic">经典</option></select></div><div className="campus-options"><span>小鸟气泡</span><button className="pixel-button gold" aria-pressed={prefs.birdBubble} onClick={()=>prefs.toggle('birdBubble')}>{prefs.birdBubble?'已开启':'已关闭'}</button></div><p className="small-print">每一块小楼，都算大学的一次努力。成绩仅保存在当前浏览器。</p><button className="pixel-button blue wide" onClick={closePanel}>{preview?'回到校园':'继续卷楼'}</button></>}
       {panel==='rules'&&<><p>对准楼顶，点击画面或按 <kbd>SPACE</kbd> 松钩。每投只有 <b>{RULES.ddl} 秒</b>，落空一次即结束。</p><div className="rule-summary pixel-tags"><span>完美 ≤ 6%</span><span>落稳 ≤ 50%</span><span>超出即落空</span></div><p className="small-print">百分比为砖块中心相对下层中心的偏移 / 砖宽；志愿砖完美窗口为 12%。</p><div className="block-guide">{instructions.map(([name,desc,sprite])=><div key={name}><div className={`mini-room ${sprite===12?'fitness':''}`} style={sprite===12?{backgroundImage:`url("${assetUrl('fitness.webp')}")`}:{backgroundPosition:`${sprite%4*100/3}% ${Math.floor(sprite/4)*50}%`}}/><div><b>{name}</b><span>{desc}</span></div></div>)}</div><p className="small-print">PERFECT 每级连击增加 10% 正向收益，最高 ×2；课业额外 +1 连击。诱惑扣分不翻倍。竞赛记原始积分，每点折算 15 分。</p><p className="small-print">综测 = 层数×10 + GPA×100 + 科研×30 + 竞赛×15 + 志愿×5 + 实践×20。按 Esc 暂停，S 跳过诱惑。</p><button className="pixel-button blue wide" onClick={closePanel}>懂了，去卷楼</button></>}
       {panel==='records'&&<><p className="small-print">当前浏览器 · 按综测总分排序 · 保留前 10 名</p>{prefs.records.length?<ol className="record-list">{prefs.records.map((r,i)=><li key={r.date+i}><span>{i+1}</span><div><b>{r.title}</b><small>{r.floor}F · GPA {r.gpa.toFixed(2)}</small></div><strong>{r.score}</strong></li>)}</ol>:<div className="empty-record">还没有成绩。<br/>校园的天际线，等你来写。</div>}<button className="pixel-button blue wide" onClick={closePanel}>返回校园</button></>}
     </section></div>}
+    {transitioning&&<PixelDissolve motion={prefs.effects&&!reducedMotion} onCovered={()=>{start();engine.current.paused=true;refresh();}} onComplete={()=>{transitionRef.current=false;setTransitioning(false);engine.current.paused=document.hidden;refresh();}}/>}
     <div className="sr-only" role="status" aria-live="polite">{s.phase==='CAMERA_SHIFT'?`${s.verdict}，${s.floor} 层，${s.rewardLabel}`:s.finished?`本局结束，${s.floor} 层，${s.score} 分`:''}</div>
   </main>;
 }

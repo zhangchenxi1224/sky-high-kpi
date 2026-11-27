@@ -10,7 +10,6 @@ export function GameHud({s}:{s:Snapshot}){
       <div className="kpi-secondary">{metrics.map(([key,name,unit])=><span key={key} title={`${name} ${s.kpi[key]}${unit}`} aria-label={`${name} ${s.kpi[key]}${unit}`}><MetricIcon kind={key as Metric}/><b>{display(s.kpi[key])}<small>{unit}</small></b></span>)}</div>
     </section>
     {s.statuses.length>0&&!s.finished&&<ul className="status-stack" aria-label="当前增益与减益">{s.statuses.map(status=><li key={status.id} className={`status-chip ${status.tone}`} title={status.description} aria-label={status.description}><span aria-hidden="true">{status.symbol}</span><b>{status.label}</b></li>)}</ul>}
-    {s.combo>=3&&<div className="hud-combo">{s.combo} <small>COMBO</small></div>}
     {s.mode==='fixed'&&<div className="hud-test-note">演示局 · 不计成绩</div>}
   </div>;
 }

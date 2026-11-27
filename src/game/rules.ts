@@ -108,7 +108,7 @@ export function getSocialProfile(k:KPI){
   const metrics=socialMetrics(k);
   return {metrics,profile:memes.socialProfiles.find(p=>p.id===metrics.id)!};
 }
-export type TitleStats={floor:number;kpi:KPI;accepted:number;maxSkipStreak:number;maxCombo:number;researchImperfect:number;counts:Partial<Record<Kind,number>>};
+export type TitleStats={floor:number;kpi:KPI;accepted:number;maxSkipStreak:number;maxCombo:number;researchImperfect:number;counts:Partial<Record<Kind,number>>;lateLandings?:number;narrowLandings?:number;ddlForcedMiss?:boolean};
 export function getTitle(s:TitleStats){
   const k=s.kpi;const volunteerValue=k.volunteer*5+k.practice*20;const social=socialMetrics(k);
   const nGpa=clamp(k.gpa/4,0,1),nResearch=clamp(k.research/15,0,1),nCompetition=clamp(k.competition/30,0,1),nVolunteer=clamp(k.volunteer/30,0,1),nPractice=clamp(k.practice/15,0,1);
@@ -117,7 +117,30 @@ export function getTitle(s:TitleStats){
   const projectStar=s.floor>=15&&social.social>=.62&&(nCompetition+nPractice)/2>=.55;
   const libraryHermit=s.floor>=15&&social.academic>=.65&&social.id==='introvert';
   const exactScore=score(s.floor,k);
-  const rule=exactScore===1103?'chenze1103':s.accepted>=3?'temptation':s.maxSkipStreak>=3&&s.floor>20?'resist':comeback?'comeback':s.floor>=30&&k.gpa>=3.8?'champion':allRounder?'allRounder':projectStar?'projectStar':volunteerValue>Math.max(k.gpa*100,k.research*30,k.competition*15)&&s.maxCombo>=3?'volunteer':(s.counts.research??0)>=Math.max(1,...Object.values(s.counts))&&s.researchImperfect>=2?'research':libraryHermit?'libraryHermit':s.floor<=5?'early':'default';
+  // Priority follows the agreed insertion positions; the first match wins.
+  const candidates:[string,boolean][]=[
+    ['chenze1103',exactScore===1103],
+    ['zeroGpa',s.floor>=10&&k.gpa===0],
+    ['secretGrinder',s.accepted>=2&&s.floor>=22&&k.gpa>=3.3],
+    ['temptation',s.accepted>=3],
+    ['resist',s.maxSkipStreak>=3&&s.floor>20],
+    ['comeback',comeback],
+    ['champion',s.floor>=30&&k.gpa>=3.8],
+    ['precision',s.maxCombo>=7],
+    ['allRounder',allRounder],
+    ['deadline',s.floor>=8&&((s.lateLandings??0)>=3||s.ddlForcedMiss===true)],
+    ['projectStar',projectStar],
+    ['volunteer',volunteerValue>Math.max(k.gpa*100,k.research*30,k.competition*15)&&s.maxCombo>=3],
+    ['campusHelper',s.floor>=12&&k.volunteer>=20&&k.gpa<=2.2],
+    ['research',(s.counts.research??0)>=Math.max(1,...Object.values(s.counts))&&s.researchImperfect>=2],
+    ['itemMaster',s.floor>=15&&(s.counts.coffee??0)+(s.counts.notes??0)>=3],
+    ['examPurist',s.floor>=15&&k.gpa>=3.6&&k.research<=2&&k.competition<=5&&k.volunteer<=4&&k.practice<=2],
+    ['libraryHermit',libraryHermit],
+    ['narrowMiracle',s.floor>=16&&s.maxCombo<=1&&(s.narrowLandings??0)>=5],
+    ['early',s.floor<=5],
+    ['default',true]
+  ];
+  const rule=candidates.find(([,matches])=>matches)![0];
   return memes.titles.find(t=>t.rule===rule)!;
 }
 export const FIXED_SEQUENCE=['study','volunteer','practice','research','competition','fitness','coffee','notes',...memes.temptationSkins.map(s=>s.id)];
