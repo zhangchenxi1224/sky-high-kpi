@@ -4,12 +4,16 @@ import {transform} from 'esbuild';
 const root=process.cwd();await mkdir('delivery',{recursive:true});
 const files=await readdir('dist/assets');const main=files.find(f=>/^index-.*\.js$/.test(f));const css=files.find(f=>/^index-.*\.css$/.test(f));
 let js=await readFile(`dist/assets/${main}`,'utf8');
+const images=new Map();
+for(const f of files.filter(f=>f.endsWith('.webp')))images.set(f,'data:image/webp;base64,'+(await readFile(`dist/assets/${f}`)).toString('base64'));
+const inlineImages=text=>{for(const [f,data] of images)for(const prefix of [`../assets/${f}`,`./assets/${f}`,`/assets/${f}`,`assets/${f}`])text=text.replaceAll(prefix,data);return text;};
 for(const f of files.filter(f=>f.endsWith('.js')&&f!==main)){
   const chunk=await readFile(`dist/assets/${f}`,'utf8');
   js=js.replaceAll(`./${f}`,`data:text/javascript;base64,${Buffer.from(chunk).toString('base64')}`);
 }
-const image='data:image/webp;base64,'+(await readFile('dist/assets/rooms.webp')).toString('base64');
-const style=await readFile(`dist/assets/${css}`,'utf8');
+js=inlineImages(js);
+const image=images.get('rooms.webp');
+const style=inlineImages(await readFile(`dist/assets/${css}`,'utf8'));
 let html=await readFile('dist/index.html','utf8');
 const licenses=await readFile('dist/THIRD_PARTY_LICENSES.txt','utf8');
 html=html.replace(/<script\b[^>]*src="[^"]+"[^>]*><\/script>/g,'').replace(/<link\b[^>]*rel="stylesheet"[^>]*>/g,'');

@@ -12,6 +12,7 @@ export class GameEngine {
   time=0;phaseTime=0;ddl=RULES.ddl;paused=false;finished=false;forced=false;warningPlayed=false;rollback=0;
   instability=0;sway=0;private swayVelocity=0;landingFeedback='';
   speedNext=1;angleNext=1;speedMultiplier=1;angleMultiplier=1;practiceLeft=0;notesLeft=0;coffeeUntil=0;
+  fitnessLeft=0;fitnessActive=false;
   message='';messageUntil=0;rewardLabel='';verdict='';lastLandTime=-5;drawHistory:Kind[]=[];drawIndex=0;
   seed:number;mode:'normal'|'fixed';random:()=>number;listeners=new Set<(event:GameEvent)=>void>();private accumulator=0;private extremeAnnounced=false;
   constructor(seed=Date.now()>>>0,mode:'normal'|'fixed'='normal'){this.seed=seed;this.mode=mode;this.random=seeded(seed);}
@@ -36,11 +37,15 @@ export class GameEngine {
   get topX(){return this.tower.at(-1)?.x??0;}
   get topY(){return -this.floor*RULES.height;}
   get coffeeRemaining(){return Math.max(0,this.coffeeUntil-this.time);}
-  get params(){const d=difficulty(this.floor+1,this.rollback);return {...d,omega:d.omega*this.speedMultiplier*(this.coffeeRemaining>0?.55:1),angle:d.angle*this.angleMultiplier};}
+  get params(){
+    const d=difficulty(this.floor+1,this.rollback),fitness=this.fitnessActive?1+RULES.fitnessBoost:1;
+    return {...d,omega:d.omega*this.speedMultiplier*(this.coffeeRemaining>0?.55:1)*fitness,angle:d.angle*this.angleMultiplier*fitness};
+  }
   start(){if(this.phase!=='READY')return false;this.emit({type:'start'});this.spawn();return true;}
   spawn(){
     this.speedMultiplier=this.speedNext;this.speedNext=1;
     this.angleMultiplier=this.angleNext*(this.notesLeft>0?.7:1);this.angleNext=1;if(this.notesLeft>0)this.notesLeft--;
+    this.fitnessActive=this.fitnessLeft>0;if(this.fitnessActive)this.fitnessLeft--;
     const high=this.params.omega>=.75*RULES.omegaMax;
     const id=FIXED_SEQUENCE[this.drawIndex%FIXED_SEQUENCE.length];
     this.current=this.mode==='fixed'?{...catalog.find(b=>b.id===id)!}:drawBlock(this.floor+1,this.random,high,this.drawHistory.slice(-4).includes('temptation'));
@@ -104,6 +109,14 @@ export class GameEngine {
       case 'research':this.speedNext=1.12;if(!perfect)this.researchImperfect++;this.say('导师加活！下一块摆速 +12%');break;
       case 'competition':if(Math.abs(delta)>RULES.width*.25){this.angleNext=1.15;this.say('熬夜赶 PPT！下一块摆幅 +15%');}break;
       case 'practice':this.practiceLeft=2;this.say('实践加成 · 后两块正向综测 +25%');break;
+      case 'fitness':
+        if(this.kpi.competition+this.kpi.volunteer>=RULES.fitnessKpi)this.say(`体测达标 · 竞赛与志愿合计 ${RULES.fitnessKpi}，摆速不变`);
+        else {
+          const turns=1+Math.floor(this.random()*3);
+          this.fitnessLeft=Math.max(this.fitnessLeft,turns);
+          this.say(`体测加练！后 ${turns} 投摆速与摆幅 +15%`);
+        }
+        break;
       case 'coffee':this.coffeeUntil=this.time+5;break;
       case 'notes':this.notesLeft=3;this.say('这本秘籍真有用！后三投摆幅收窄 30%');break;
       case 'temptation':this.accepted++;this.skipStreak=0;this.rollback+=6;this.say(memes.temptationSkins.find(s=>s.id===block.id)!.acceptDanmaku+' · 难度回退 6 层');break;
@@ -122,6 +135,8 @@ export class GameEngine {
     if(this.practiceLeft>0)buffs.push(`实践 +25% · 剩 ${this.practiceLeft} 块`);
     if(this.speedMultiplier>1)buffs.push('导师加活 +12%');
     if(this.angleMultiplier>1)buffs.push('PPT 手抖 +15%');
+    const fitnessTurns=this.fitnessLeft+(this.fitnessActive?1:0);
+    if(fitnessTurns>0)buffs.push(`体测加练 · ${fitnessTurns} 投摆速/幅 +15%`);
     return {phase:this.phase,floor:this.floor,kpi:{...this.kpi},score:score(this.floor,this.kpi),ddl:this.ddl,current:this.current,combo:this.combo,maxCombo:this.maxCombo,perfects:this.perfects,accepted:this.accepted,skipped:this.skipped,maxSkipStreak:this.maxSkipStreak,researchImperfect:this.researchImperfect,counts:{...this.counts},paused:this.paused,finished:this.finished,forced:this.forced,rollback:this.rollback,buffs,message:this.message,messageUntil:this.messageUntil,rewardLabel:this.rewardLabel,verdict:this.verdict,seed:this.seed,mode:this.mode,elapsed:this.time};
   }
 }
