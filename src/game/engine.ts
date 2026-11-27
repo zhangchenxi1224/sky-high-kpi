@@ -2,10 +2,8 @@ import {RULES, catalog, difficulty, drawBlock, emptyKpi, FIXED_SEQUENCE, judge, 
 import {hookPosition} from './hook';
 import {TowerMotion} from './tower-motion';
 import memes from '../config/memePack.json';
-const finalZoom=.82;
 const visibleFloors=5.75;
 const hookToBrick=24;
-const minHangingGap=1.6*RULES.height;
 export type Phase='READY'|'SWINGING'|'DROPPING'|'RESOLVE'|'CAMERA_SHIFT'|'GAME_OVER';
 export type Placed={block:Block;x:number;y:number;perfect:boolean};
 export type GameEvent={type:'start'|'spawn'|'drop'|'land'|'miss'|'over'|'skip'|'warning'|'message';text?:string;perfect?:boolean;combo?:number};
@@ -14,6 +12,7 @@ export class GameEngine {
   phase:Phase='READY';floor=0;kpi=emptyKpi();combo=0;maxCombo=0;perfects=0;accepted=0;skipped=0;skipStreak=0;maxSkipStreak=0;researchImperfect=0;counts:Partial<Record<Kind,number>>={};
   tower:Placed[]=[];current:Block|null=null;currentX=0;currentY=0;velocity=0;rotation=0;phaseAngle=-.65;hookAngle=0;hookX=0;hookY=0;anchorX=0;
   cameraY=0;cameraX=0;cameraFromY=0;cameraFromX=0;cameraTime=0;groundScreen=620;hangingScreen=170;viewHeight=720;ropeLength=190;
+  private landscape=false;
   time=0;phaseTime=0;ddl=8;paused=false;finished=false;forced=false;warningPlayed=false;rollback=0;
   instability=0;sway=0;private swayVelocity=0;landingFeedback='';
   readonly detailedMotion=new TowerMotion();
@@ -25,20 +24,28 @@ export class GameEngine {
   emit(event:GameEvent){this.listeners.forEach(fn=>fn(event));}
   say(text:string){this.message=text;this.messageUntil=this.time+3.2;this.emit({type:'message',text});}
   choose(pool:string[]){return pool[Math.floor(this.random()*pool.length)];}
-  setViewport(height:number){
+  setViewport(width:number,height:number){
+    this.landscape=width>height;
     this.viewHeight=height;this.groundScreen=height-100;this.hangingScreen=Math.max(126,height*.23);this.ropeLength=this.hangingScreen+24;
     this.cameraY=this.cameraTarget(this.floor);
-    if(this.phase==='CAMERA_SHIFT')this.cameraFromY=this.cameraTarget(this.floor-1);
+    if(this.phase==='CAMERA_SHIFT'){
+      this.cameraFromY=this.cameraTarget(this.floor-1);
+      this.cameraY+=(this.cameraFromY-this.cameraY)*(1-Math.min(1,this.cameraTime/.43))**3;
+    }
     if(this.phase==='SWINGING')this.updateHook();
   }
+  private get finalZoom(){return this.landscape?.78:.82;}
+  private get hangingGap(){return (this.landscape?2.5:1.6)*RULES.height;}
   get viewZoom(){
     const transition=this.phase==='CAMERA_SHIFT'?1-Math.min(1,this.cameraTime/.43):0;
     const progress=Math.min(1,Math.max(0,(this.floor-transition-2)/4));
-    return 1-(1-finalZoom)*progress*progress*(3-2*progress);
+    return 1-(1-this.finalZoom)*progress*progress*(3-2*progress);
   }
   private cameraTarget(floor:number){
     if(floor<=2)return 0;
-    const roof=Math.max(this.hangingScreen+RULES.height+75,this.viewHeight/finalZoom-visibleFloors*RULES.height);
+    // In landscape, lower the roof as well as lifting the rig so the swinging room stays on screen.
+    const minRoof=this.landscape?this.hangingScreen+.65*RULES.height+this.hangingGap:this.hangingScreen+RULES.height+75;
+    const roof=Math.max(minRoof,this.viewHeight/this.finalZoom-visibleFloors*RULES.height);
     return Math.max(0,floor*RULES.height+roof-this.groundScreen);
   }
   get topX(){return this.tower.at(-1)?.x??0;}
@@ -46,7 +53,7 @@ export class GameEngine {
   get hookPivotY(){
     const roof=this.topY+this.groundScreen+this.cameraY;
     // The rope reaches its lowest point when vertical; lift the entire rig if needed.
-    const lowestPivot=roof-minHangingGap-RULES.height-hookToBrick-this.ropeLength;
+    const lowestPivot=roof-this.hangingGap-RULES.height-hookToBrick-this.ropeLength;
     return Math.min(-48,lowestPivot);
   }
   get coffeeRemaining(){return Math.max(0,this.coffeeUntil-this.time);}

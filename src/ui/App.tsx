@@ -8,6 +8,8 @@ import {usePreferences} from '../store';
 const query=new URLSearchParams(location.search);
 const initialSeed=Number(query.get('seed'))||Date.now()>>>0;
 const mode=query.get('mode')==='fixed'?'fixed':'normal';
+const randomPlayUrl=new URL(location.href);
+for(const key of ['mode','demo','seed'])randomPlayUrl.searchParams.delete(key);
 const swayDemo=mode==='fixed'&&query.get('demo')==='sway';
 // Equal alternating misses of the center reveal cumulative shake without net tower lean.
 const demoOffsets=[0,0,0,0,0,0,28,-28,28,-28,40,0,0,0];
@@ -18,7 +20,7 @@ function demoDropReady(game:GameEngine){
 }
 const fmt=(n:number)=>Number(n.toFixed(2)).toString();
 function Cap(){return <svg className="cap" viewBox="0 0 36 28" aria-hidden="true"><path fill="#b58b46" d="M8 14h21v9l-11 5-10-5z"/><path fill="#ffe4a4" d="M1 9 18 1 35 9v4L18 21 1 13z"/><path fill="#d7ad62" d="m1 13 17 8 17-8v-4l-17 8L1 9z"/><path stroke="#fce3a4" strokeWidth="2" d="M31 14v10"/></svg>}
-function StatGrid({s}:{s:Snapshot}){return <div className="stat-grid"><div><span>绩点 GPA</span><b>{s.kpi.gpa.toFixed(2)}<small> / 4.00</small></b></div><div><span>科研成果</span><b>{fmt(s.kpi.research)}</b></div><div><span>竞赛积分</span><b>{fmt(s.kpi.competition)}</b></div><div><span>志愿时长</span><b>{fmt(s.kpi.volunteer)}<small> h</small></b></div><div><span>社会实践</span><b>{fmt(s.kpi.practice)}</b></div><div><span>最高连击</span><b>{s.maxCombo}<small> COMBO</small></b></div></div>}
+function StatGrid({s}:{s:Snapshot}){return <div className="stat-grid"><div><span>绩点 GPA</span><b>{s.kpi.gpa.toFixed(2)}<small> / 4.00</small></b><small>落稳课业砖 {s.counts.study??0} 块</small></div><div><span>科研成果</span><b>{fmt(s.kpi.research)}</b></div><div><span>竞赛积分</span><b>{fmt(s.kpi.competition)}</b></div><div><span>志愿时长</span><b>{fmt(s.kpi.volunteer)}<small> h</small></b></div><div><span>社会实践</span><b>{fmt(s.kpi.practice)}</b></div><div><span>最高连击</span><b>{s.maxCombo}<small> COMBO</small></b></div></div>}
 const instructions=[['课业','PERFECT 额外 +1 连击，GPA +0.20 / 0.23 / 0.26'],['科研','普通落稳拿 70%，完美拿全额；下一块摆速 +12%'],['竞赛','积分 +4 或 +6；偏移超 25% 时下块摆幅 +15%'],['志愿','完美窗口加宽至砖宽的 12%'],['实践','接下来两块的正向 KPI 收益 +25%'],['冰美式','未来 5 秒摆速 −45%'],['邪修秘籍','GPA +0.10，后三投摆幅 −30%'],['赛博诱惑','GPA −0.15，难度回退 6 层；也可免费跳过']];
 export function App(){
   const canvas=useRef<HTMLCanvasElement>(null),engine=useRef<GameEngine>(new GameEngine(initialSeed,mode)),renderer=useRef<Renderer|null>(null),sound=useRef(new Sound());
@@ -38,7 +40,7 @@ export function App(){
   };
   const restart=()=>{
     const game=new GameEngine(Number(query.get('seed'))||Date.now()>>>0,mode);
-    game.setViewport(renderer.current?.height??720);
+    game.setViewport(renderer.current?.width??960,renderer.current?.height??720);
     engine.current=game;
     attach(game);
     setPoster(null);
@@ -85,7 +87,7 @@ export function App(){
     <canvas ref={canvas} className="game-canvas" onPointerDown={preview?undefined:drop} aria-label="游戏画面：点击或按空格松钩"/>
     <div className="hud-top"><div className="floor-panel pixel-panel"><div><Cap/><strong>{s.floor}<em>F</em></strong></div><span>GPA {s.kpi.gpa.toFixed(2)}</span></div>
       {!preview&&s.combo>=3&&<div className="combo">{s.combo}<small>COMBO</small></div>}
-      {mode==='fixed'&&<div className="test-badge">固定测试局 · 不计成绩</div>}
+      {mode==='fixed'&&<div className="test-badge">演示局 · 固定出砖</div>}
     </div>
     <nav className="top-controls" aria-label="游戏设置">
       {!preview&&s.phase!=='GAME_OVER'&&<button className="pixel-button gold pause-control" onClick={()=>{engine.current.togglePause();refresh();}}>Ⅱ 暂停</button>}
@@ -97,8 +99,8 @@ export function App(){
     {preview&&<section className="welcome" aria-label="开始游戏">
       <div className="welcome-copy"><div className="eyebrow">ONE CLICK. SKY HIGH.</div><h1>绩点卷上天</h1><p>把大学，叠成天空的形状。</p>
       <div className="intro-tags"><span>一键松钩</span><i>✦</i><span>单命挑战</span><i>✦</i><span>无尽高空</span></div></div>
-      <button className="pixel-button blue drop" onClick={start}>{assetReady?'开始卷楼':'开始卷楼 · 加载中'}</button>
-      <div className="welcome-links"><button className="text-link" onClick={()=>openPanel('rules')}>新生入学指南 <span>?</span></button>
+      <button className="pixel-button blue drop" onClick={start}>{assetReady?(mode==='fixed'?'手动玩固定序列':'开始卷楼'):'加载中…'}</button>
+      <div className="welcome-links">{mode==='fixed'&&<a className="text-link play-random" href={randomPlayUrl.href}>去随机试玩</a>}<button className="text-link" onClick={()=>openPanel('rules')}>新生入学指南 <span>?</span></button>
       {best&&<div className="best-note">本机最高纪录　{best.floor}F · {best.score} 分</div>}
       </div>
     </section>}
@@ -111,7 +113,7 @@ export function App(){
     </div>
     <div className="score-panel pixel-panel" aria-label={`综测总分 ${s.score}`}><Cap/><strong>{String(s.score).padStart(5,'0')}</strong><span>综测</span></div>
     {s.paused&&!panel&&!s.finished&&<div className="modal-backdrop"><section className="paper-modal compact" role="dialog" aria-modal="true" aria-labelledby="pause-title"><span className="modal-eyebrow">TAKE A BREATH</span><h2 id="pause-title">课间休息</h2><p>DDL 和吊车已暂停，喝口水再继续。</p><div className="result-buttons"><button className="pixel-button blue" autoFocus onClick={()=>{engine.current.paused=false;void sound.current.unlock();refresh();}}>继续卷楼</button><button className="pixel-button gold" onClick={restart}>重新开局</button></div></section></div>}
-    {s.finished&&!poster&&<div className="modal-backdrop result-backdrop"><section className="paper-modal result" role="dialog" aria-modal="true" aria-labelledby="result-title"><span className="modal-eyebrow">CAMPUS PERFORMANCE REPORT</span><h2 id="result-title">本次结业鉴定</h2><div className="result-score"><b>{s.floor}<small> F</small></b><div><span>综测总分</span><strong>{s.score.toLocaleString()}</strong></div></div><div className="result-title">{title.name}</div><p>{title.comment}</p><StatGrid s={s}/><div className="result-detail">完美落点 {s.perfects} 次 · 接住诱惑 {s.accepted} 次 · 忍痛跳过 {s.skipped} 次</div>{s.forced&&<p className="forced-note">本局由 8 秒 DDL 强制松钩后落空。</p>}<div className="result-buttons"><button className="pixel-button blue" autoFocus onClick={restart}>重开大学</button><button className="pixel-button gold" disabled={exporting} onClick={exportPoster}>{exporting?'正在盖章…':'生成结业海报'}</button></div><button className="text-link" onClick={()=>openPanel('records')}>查看本机成绩榜</button>{error&&<p role="alert">{error}</p>}</section></div>}
+    {s.finished&&!poster&&<div className="modal-backdrop result-backdrop"><section className="paper-modal result" role="dialog" aria-modal="true" aria-labelledby="result-title"><span className="modal-eyebrow">CAMPUS PERFORMANCE REPORT</span><h2 id="result-title">{s.mode==='fixed'?'固定演示局':'随机试玩局'} · 结业鉴定</h2><div className="result-score"><b>{s.floor}<small> F</small></b><div><span>综测总分</span><strong>{s.score.toLocaleString()}</strong></div></div><div className="result-title">{title.name}</div><p>{title.comment}</p><StatGrid s={s}/><div className="result-detail">完美落点 {s.perfects} 次 · 接住诱惑 {s.accepted} 次 · 忍痛跳过 {s.skipped} 次</div>{s.forced&&<p className="forced-note">本局由 8 秒 DDL 强制松钩后落空。</p>}<div className="result-buttons"><button className="pixel-button blue" autoFocus onClick={restart}>重开大学</button><button className="pixel-button gold" disabled={exporting} onClick={exportPoster}>{exporting?'正在盖章…':'生成结业海报'}</button></div>{s.mode==='fixed'&&<a className="text-link play-random" href={randomPlayUrl.href}>去随机试玩</a>}<button className="text-link" onClick={()=>openPanel('records')}>查看本机成绩榜</button>{error&&<p role="alert">{error}</p>}</section></div>}
     {panel&&<div className="modal-backdrop"><section className="paper-modal campus-modal" role="dialog" aria-modal="true" aria-labelledby="campus-title"><button className="close" aria-label="关闭窗口" onClick={closePanel}>×</button><span className="modal-eyebrow">CAMPUS NOTICEBOARD</span><h2 id="campus-title">{panel==='rules'?'新生入学指南':panel==='records'?'本机成绩榜':'校园公告栏'}</h2><div className="tabs"><button className={panel==='campus'?'selected':''} onClick={()=>setPanel('campus')}>本局账本</button><button className={panel==='rules'?'selected':''} onClick={()=>setPanel('rules')}>玩法指南</button><button className={panel==='records'?'selected':''} onClick={()=>setPanel('records')}>成绩榜</button></div>
       {panel==='campus'&&<><StatGrid s={s}/><div className="campus-options"><span>校园景色</span><button className="pixel-button blue" onClick={()=>prefs.toggle('night')}>{prefs.night?'星空校区':'日落校区'}</button></div>
         <div className="campus-options"><label htmlFor="sway-style">楼体摇晃</label><select id="sway-style" value={prefs.detailedSway?'detailed':'classic'} onChange={()=>prefs.toggle('detailedSway')}><option value="detailed">细腻</option><option value="classic">经典</option></select></div>

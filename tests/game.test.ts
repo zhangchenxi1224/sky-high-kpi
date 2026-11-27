@@ -115,7 +115,7 @@ test('opposite errors accumulate sway even when their permanent offsets cancel; 
 });
 test('camera holds for two floors, zooms out through floor six, then frames five floors and most of the sixth',()=>{
   for(const height of [720,760,950]){
-    const e=new GameEngine(5,'fixed');e.setViewport(height);
+    const e=new GameEngine(5,'fixed');e.setViewport(430,height);
     let previousZoom=1;
     for(let i=1;i<=10;i++){
       land(e,'study',10);next(e);
@@ -130,12 +130,21 @@ test('camera holds for two floors, zooms out through floor six, then frames five
   }
 });
 test('contact boundaries: exact 6%, 12%, 50%, and first outside pixel',()=>{assert.equal(judge(5.28,'study'),'PERFECT');assert.equal(judge(5.2801,'study'),'SUCCESS');assert.equal(judge(10.56,'volunteer'),'PERFECT');assert.equal(judge(10.5601,'volunteer'),'SUCCESS');assert.equal(judge(-44,'study'),'SUCCESS');assert.equal(judge(44.001,'study'),'MISS');});
-test('the hanging brick clears the roof at its lowest point through zoom and resizing',()=>{
+test('rotating swaps only the framing: 2.5 bricks of clearance in landscape, original spacing in portrait',()=>{
   const e=new GameEngine(7,'fixed');e.start();
   for(let floor=0;floor<=40;floor++){
-    for(const height of [720,760,950]){
-      e.setViewport(height);e.phaseAngle=0;e.updateHook();
-      assert.ok(e.topY-(e.currentY+RULES.height)>=1.6*RULES.height-1e-8);
+    for(const [width,height] of [[430,760],[1280,720],[430,950],[1520,720]]){
+      e.setViewport(width,height);e.phaseAngle=0;e.updateHook();
+      const landscape=width>height;
+      const gap=(e.topY-e.currentY-RULES.height)/RULES.height;
+      assert.ok(gap>=(landscape?2.5:1.6)-1e-8);
+      if(floor>=6&&landscape){
+        approx(gap,2.5);
+        assert.ok((height/e.viewZoom-e.topY-e.groundScreen-e.cameraY)/RULES.height>=5);
+      }
+      e.phaseAngle=Math.PI/2;e.angleMultiplier=1.15;e.updateHook();
+      assert.ok(e.currentY+e.groundScreen+e.cameraY>=0);
+      e.angleMultiplier=1;
     }
     land(e,'study',20);next(e);
   }

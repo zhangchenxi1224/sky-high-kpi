@@ -17,7 +17,7 @@ export class Renderer {
       const out=document.createElement('canvas');out.width=176;out.height=176;const oc=out.getContext('2d')!;oc.imageSmoothingEnabled=false;oc.drawImage(this.sheet,x0,y0,x1-x0+1,y1-y0+1,0,0,176,176);this.sprites.push(out);
     }
   }
-  resize(w:number,h:number,e:GameEngine){this.scale=w/h<.85?Math.min(w/430,h/760):h/720;this.width=w/this.scale;this.height=h/this.scale;const d=Math.min(devicePixelRatio||1,2);this.canvas.width=Math.round(w*d);this.canvas.height=Math.round(h*d);this.ctx.setTransform(this.scale*d,0,0,this.scale*d,0,0);e.setViewport(this.height);this.skyKey='';}
+  resize(w:number,h:number,e:GameEngine){this.scale=w/h<.85?Math.min(w/430,h/760):h/720;this.width=w/this.scale;this.height=h/this.scale;const d=Math.min(devicePixelRatio||1,2);this.canvas.width=Math.round(w*d);this.canvas.height=Math.round(h*d);this.ctx.setTransform(this.scale*d,0,0,this.scale*d,0,0);e.setViewport(this.width,this.height);this.skyKey='';}
   rect(r:Rect,color:string){this.ctx.fillStyle=color;this.ctx.fillRect(Math.round(r.x),Math.round(r.y),Math.round(r.w),Math.round(r.h));}
   render(e:GameEngine){
     const c=this.ctx,w=this.width,h=this.height;this.drawSky(e);c.save();
