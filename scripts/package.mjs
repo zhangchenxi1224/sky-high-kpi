@@ -8,7 +8,7 @@ for(const f of files.filter(f=>f.endsWith('.js')&&f!==main)){
   const chunk=await readFile(`dist/assets/${f}`,'utf8');
   js=js.replaceAll(`./${f}`,`data:text/javascript;base64,${Buffer.from(chunk).toString('base64')}`);
 }
-const images=Object.fromEntries(await Promise.all(files.filter(f=>/\.(webp|svg|woff|mp3)$/.test(f)).map(async f=>[f,`data:${f.endsWith('.mp3')?'audio/mpeg':f.endsWith('.woff')?'font/woff':f.endsWith('.svg')?'image/svg+xml':'image/webp'};base64,`+(await readFile(`dist/assets/${f}`)).toString('base64')])));
+const images=Object.fromEntries(await Promise.all(files.filter(f=>/\.(png|webp|svg|woff|mp3)$/.test(f)).map(async f=>[f,`data:${f.endsWith('.mp3')?'audio/mpeg':f.endsWith('.woff')?'font/woff':f.endsWith('.svg')?'image/svg+xml':f.endsWith('.png')?'image/png':'image/webp'};base64,`+(await readFile(`dist/assets/${f}`)).toString('base64')])));
 const style=await readFile(`dist/assets/${css}`,'utf8');
 let html=await readFile('dist/index.html','utf8');
 const licenses=await readFile('dist/THIRD_PARTY_LICENSES.txt','utf8');

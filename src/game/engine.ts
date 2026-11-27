@@ -1,4 +1,4 @@
-import {RULES, catalog, difficulty, drawBlock, emptyKpi, FIXED_SEQUENCE, judge, reward, score, seeded, type Block, type Kind, type KPI} from './rules';
+import {RULES, TEMPTATION_RULES, temptationRelief, catalog, difficulty, drawBlock, emptyKpi, FIXED_SEQUENCE, judge, reward, score, seeded, type Block, type Kind, type KPI} from './rules';
 import {hookPosition} from './hook';
 import {TowerMotion} from './tower-motion';
 import memes from '../config/memePack.json';
@@ -70,11 +70,11 @@ export class GameEngine {
     this.angleMultiplier=this.angleNext*(this.notesLeft>0?.7:1);this.angleNext=1;if(this.notesLeft>0)this.notesLeft--;
     const high=this.params.omega>=RULES.highPressureOmega;
     const id=FIXED_SEQUENCE[this.drawIndex%FIXED_SEQUENCE.length];
-    this.current=this.mode==='fixed'?{...catalog.find(b=>b.id===id)!}:drawBlock(this.floor+1,this.random,high,this.drawHistory.slice(-4).includes('temptation'));
+    this.current=this.mode==='fixed'?{...catalog.find(b=>b.id===id)!}:drawBlock(this.floor+1,this.random,high,this.drawHistory.slice(-TEMPTATION_RULES.cooldown).includes('temptation'),this.kpi.gpa);
     this.drawIndex++;this.drawHistory.push(this.current.kind);if(this.drawHistory.length>4)this.drawHistory.shift();
     this.phase='SWINGING';this.phaseTime=0;this.ddl=RULES.ddl;this.dropDdl=RULES.ddl;this.forced=false;this.warningPlayed=false;this.velocity=0;this.rotation=0;this.anchorX=this.topX;
     this.phaseAngle=(this.drawIndex%2?-.65:.65);this.updateHook();this.emit({type:'spawn'});
-    if(this.current.kind==='temptation')this.say('GPA −0.15 · 摆速 / 摆幅回退 6 层');
+    if(this.current.kind==='temptation')this.say(`GPA −0.15 · 难度暂缓，最多 ${temptationRelief(this.floor+1)} 层`);
     else if(this.params.omega>RULES.omegaMax*.8&&!this.extremeAnnounced){this.say(this.choose(memes.danmakuBank.extremeSpeed));this.extremeAnnounced=true;}
   }
   updateHook(){const p=hookPosition(this.phaseAngle,this.params.angle,this.ropeLength);this.hookAngle=p.angle;this.hookX=this.anchorX+p.x;this.hookY=this.hookPivotY+p.y;this.currentX=this.hookX;this.currentY=this.hookY+hookToBrick-this.groundScreen-this.cameraY;}
@@ -148,6 +148,7 @@ export class GameEngine {
     if(perfect)this.currentX-=Math.sign(delta)*Math.min(2,Math.abs(delta));
     const r=reward(this.kpi,block,perfect,this.combo,this.practiceLeft>0);this.kpi=r.kpi;this.rewardLabel=r.label;
     if(this.practiceLeft>0)this.practiceLeft--;
+    if(block.kind!=='temptation')this.rollback=Math.max(0,this.rollback-TEMPTATION_RULES.reliefDecay);
     switch(block.kind){
       case 'research':this.speedNext=1.12;if(!perfect)this.researchImperfect++;this.say('导师加活！下一块摆速 +12%');break;
       case 'competition':if(Math.abs(delta)>RULES.width*.25){this.angleNext=1.15;this.say('熬夜赶 PPT！下一块摆幅 +15%');}break;
@@ -158,7 +159,7 @@ export class GameEngine {
         if(this.kpi.competition+this.kpi.volunteer>=RULES.fitnessKpi)this.say('体测达标 · 竞赛与志愿合计 30，摆速不变');
         else {const turns=1+Math.floor(this.random()*3);this.fitnessLeft=Math.max(this.fitnessLeft,turns);this.say(`体测加练！后 ${turns} 投摆速与摆幅 +15%`);}
         break;
-      case 'temptation':this.accepted++;this.skipStreak=0;this.rollback+=6;this.say(memes.temptationSkins.find(s=>s.id===block.id)!.acceptDanmaku+' · 难度回退 6 层');break;
+      case 'temptation':this.accepted++;this.skipStreak=0;this.rollback=temptationRelief(this.floor+1);this.say(memes.temptationSkins.find(s=>s.id===block.id)!.acceptDanmaku+` · 难度暂缓，最多 ${this.rollback} 层`);break;
     }
     this.floor++;this.counts[block.kind]=(this.counts[block.kind]??0)+1;
     this.currentY=-this.floor*RULES.height;this.tower.push({block,x:this.currentX,y:this.currentY,perfect});this.current=null;

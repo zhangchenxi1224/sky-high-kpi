@@ -2,12 +2,13 @@ import {GameEngine} from '../game/engine';
 import {RULES,seeded} from '../game/rules';
 import {assetUrl} from '../features/assets';
 import {pixelFont} from '../features/pixel-font';
-import {metricColors,snap} from './layout';
+import {metricColors,snap,portraitLayout} from './layout';
 type Rect={x:number;y:number;w:number;h:number};
 const mix=(a:string,b:string,t:number)=>{const ca=parseInt(a.slice(1),16),cb=parseInt(b.slice(1),16);return `rgb(${[16,8,0].map(s=>Math.round(((ca>>s)&255)*(1-t)+((cb>>s)&255)*t)).join(',')})`;};
 export class Renderer {
-  ctx:CanvasRenderingContext2D;sheet=new Image();fitnessSheet=new Image();sprites:HTMLCanvasElement[]=[];width=960;height=720;scale=1;effects=true;night=false;
+  ctx:CanvasRenderingContext2D;sheet=new Image();fitnessSheet=new Image();craneSheet=new Image();sprites:HTMLCanvasElement[]=[];width=960;height=720;scale=1;effects=true;night=false;
   sky:HTMLCanvasElement|null=null;skyKey='';
+  private portraitTop=0;private viewportTop=0;
   private reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
   detailedSway=true;
   constructor(public canvas:HTMLCanvasElement){
@@ -15,8 +16,9 @@ export class Renderer {
     this.sheet.onload=()=>this.prepareSprites();this.sheet.src=assetUrl('rooms.webp');
     this.fitnessSheet.onload=()=>{const out=document.createElement('canvas');out.width=176;out.height=176;const c=out.getContext('2d')!;c.imageSmoothingEnabled=false;c.drawImage(this.fitnessSheet,0,0,176,176);this.sprites[12]=out;};
     this.fitnessSheet.src=assetUrl('fitness.webp');
+    this.craneSheet.src=assetUrl('crane.png');
   }
-  get assetsReady(){return Array.from({length:13},(_,i)=>!!this.sprites[i]).every(Boolean);}
+  get assetsReady(){return this.craneSheet.complete&&this.craneSheet.naturalWidth>0&&Array.from({length:13},(_,i)=>!!this.sprites[i]).every(Boolean);}
   prepareSprites(){
     const s=document.createElement('canvas');s.width=this.sheet.width;s.height=this.sheet.height;const c=s.getContext('2d')!;c.drawImage(this.sheet,0,0);const pixels=c.getImageData(0,0,s.width,s.height).data;
     for(let i=0;i<12;i++){
@@ -26,12 +28,25 @@ export class Renderer {
       const out=document.createElement('canvas');out.width=176;out.height=176;const oc=out.getContext('2d')!;oc.imageSmoothingEnabled=false;oc.drawImage(this.sheet,x0,y0,x1-x0+1,y1-y0+1,0,0,176,176);this.sprites[i]=out;
     }
   }
-  resize(w:number,h:number,e:GameEngine){this.scale=w/h<.85?Math.min(w/430,h/760):h/720;this.width=w/this.scale;this.height=h/this.scale;const d=Math.min(devicePixelRatio||1,2);this.canvas.width=Math.round(w*d);this.canvas.height=Math.round(h*d);this.ctx.setTransform(this.scale*d,0,0,this.scale*d,0,0);e.setViewport(this.width,this.height);this.skyKey='';}
+  resize(w:number,h:number,e:GameEngine){
+    this.scale=w/h<.85?Math.min(w/430,h/760):h/720;this.width=w/this.scale;this.height=h/this.scale;
+    const safeTop=parseFloat(getComputedStyle(this.canvas).getPropertyValue('--safe-area-top'))||0;
+    const layout=portraitLayout(w,h,safeTop);
+    this.portraitTop=layout.top/this.scale;this.viewportTop=e.phase==='READY'?0:this.portraitTop;
+    this.canvas.parentElement?.style.setProperty('--phone-buffs-top',`${layout.buffs}px`);
+    const d=Math.min(devicePixelRatio||1,2);this.canvas.width=Math.round(w*d);this.canvas.height=Math.round(h*d);this.ctx.setTransform(this.scale*d,0,0,this.scale*d,0,0);
+    e.setViewport(this.width,this.height-this.viewportTop);this.skyKey='';
+  }
   rect(r:Rect,color:string){this.ctx.fillStyle=color;this.ctx.fillRect(Math.round(r.x),Math.round(r.y),Math.round(r.w),Math.round(r.h));}
   render(e:GameEngine){
-    const c=this.ctx,w=this.width,h=this.height;this.drawSky(e);c.save();
+    const top=e.phase==='READY'?0:this.portraitTop;
+    if(top!==this.viewportTop){this.viewportTop=top;e.setViewport(this.width,this.height-top);}
+    const c=this.ctx,w=this.width,h=this.height-this.viewportTop;this.drawSky(e);this.drawDanmaku(e);c.save();
+    if(this.viewportTop)c.translate(0,this.viewportTop);
     const comboAge=e.time-e.comboCue.at;
-    if(this.effects&&!this.reducedMotion.matches&&!e.comboCue.broken&&e.comboCue.value>=4&&comboAge<.24)c.translate((Math.floor(comboAge/.06)%2?2:-2)/this.scale,0);
+    const jolt=this.effects&&!this.reducedMotion.matches&&!e.comboCue.broken&&e.comboCue.value>=4&&comboAge<.24?(Math.floor(comboAge/.06)%2?2:-2)/this.scale:0;
+    if(jolt)c.translate(jolt,0);
+    let rope:[number,number,number,number]|null=null;
     const zoom=e.viewZoom;
     c.scale(zoom,zoom);
     const center=w/(2*zoom)-e.cameraX;
@@ -74,8 +89,8 @@ export class Renderer {
       this.rope(pivot,-48,pivot+drift,ropeEnd);this.room(0,pivot+drift,ropeEnd+24);
     }else{
       const craneCenter=center+roofSway;
-      if(e.phase==='SWINGING'){this.rope(craneCenter+e.anchorX,e.hookPivotY,craneCenter+e.hookX,e.hookY);}
-      else if(!e.finished){const hx=center+e.anchorX+Math.sin(e.phaseAngle)*10;this.rope(center+e.anchorX,-48,hx,105);}
+      if(e.phase==='SWINGING'){rope=[craneCenter+e.anchorX,e.hookPivotY,craneCenter+e.hookX,e.hookY];this.rope(...rope);}
+      else if(!e.finished){const hx=center+e.anchorX+Math.sin(e.phaseAngle)*10;rope=[center+e.anchorX,-48,hx,105];this.rope(...rope);}
       if(e.current){const x=craneCenter+e.currentX,y=e.currentY+ground;
         c.save();c.translate(x,y+44);if(e.phase==='GAME_OVER')c.rotate(e.rotation);this.room(e.current.sprite,0,-44);c.restore();
         if(e.phase==='SWINGING'){
@@ -98,8 +113,38 @@ export class Renderer {
     c.restore();
     if(this.effects&&e.phase==='SWINGING'&&e.ddl<=2){const g=c.createRadialGradient(w/2,h/2,Math.min(w,h)*.2,w/2,h/2,Math.max(w,h)*.7);g.addColorStop(0,'#ef434300');g.addColorStop(1,`rgba(220,48,67,${.1+Math.sin(e.time*15)**2*.22})`);c.fillStyle=g;c.fillRect(0,0,w,h);}
   }
+  drawDanmaku(e:GameEngine){
+    if(e.phase==='READY'||e.finished)return;
+    const c=this.ctx,size=(this.canvas.clientWidth<=600||this.canvas.clientHeight<=540?16:20)/this.scale;
+    const draw=(text:string,age:number,top:number,color:string)=>{
+      if(age<0||age>=3.2)return;
+      c.save();c.font=pixelFont(size);c.textAlign='left';c.textBaseline='alphabetic';
+      const width=c.measureText(text).width;
+      const x=this.reducedMotion.matches?(this.width-width)/2:this.width-(this.width+width)*age/3.2;
+      const y=this.height*top+size;c.lineJoin='miter';c.lineWidth=4/this.scale;c.strokeStyle='#151d33';
+      c.strokeText(text,x,y+2/this.scale);c.strokeText(text,x,y);c.fillStyle=color;c.fillText(text,x,y);c.restore();
+    };
+    if(e.message)draw(e.message,e.time-(e.messageUntil-3.2),.34,'#fff9db');
+    if(e.combo>=7)draw(`夯爆了！×${e.combo}`,e.time-e.feverAt,this.canvas.clientHeight<=540?.22:.25,'#ffe066');
+  }
   room(sprite:number,x:number,y:number,sy=1){const c=this.ctx;c.imageSmoothingEnabled=false;const image=this.sprites[sprite];if(image)c.drawImage(image,Math.round(x-44),Math.round(y+88*(1-sy)),88,88*sy);else{c.fillStyle='#e8c28f';c.fillRect(x-44,y,88,88);c.fillStyle='#30445f';c.fillRect(x-34,y+18,28,52);c.fillRect(x+6,y+18,28,52);}}
-  rope(px:number,py:number,x:number,y:number){const c=this.ctx;c.strokeStyle='#233047';c.lineWidth=2;c.beginPath();c.moveTo(Math.round(px),py);c.lineTo(Math.round(x),Math.round(y));c.stroke();c.fillStyle='#e2c89e';c.fillRect(x-2,y-3,4,7);c.strokeRect(x-2,y-3,4,7);c.beginPath();c.moveTo(x,y+7);c.lineTo(x-31,y+28);c.moveTo(x,y+7);c.lineTo(x+31,y+28);c.stroke();}
+  rope(px:number,_py:number,x:number,y:number){
+    const c=this.ctx,t=c.getTransform(),dpr=Math.min(devicePixelRatio||1,2),scale=t.a/dpr;
+    const anchor=this.viewportTop?this.canvas.clientWidth/2:(t.a*px+t.e)/dpr,hx=(t.a*x+t.e)/dpr,hy=(t.d*y+t.f)/dpr;
+    const ready=this.craneSheet.complete&&this.craneSheet.naturalWidth>0;
+    // The supplied truss replaces the rope and rotates toward the existing hook endpoint.
+    const tipY=hy-24*scale,dx=hx-anchor,length=Math.hypot(dx,tipY);
+    const thickness=Math.max(12,Math.min(28,length*245/1800));
+    c.save();c.setTransform(dpr,0,0,dpr,0,0);c.imageSmoothingEnabled=false;
+    c.translate(anchor,0);c.rotate(Math.atan2(tipY,dx));
+    if(ready)c.drawImage(this.craneSheet,107,44,1960,245,-75/1800*length,-122/245*thickness,1960/1800*length,thickness);
+    else{c.fillStyle='#ffd43b';c.fillRect(0,-3,length,6);}
+    c.restore();
+    c.strokeStyle='#233047';c.lineWidth=2;c.beginPath();
+    c.moveTo(x,y+9);c.lineTo(x-31,y+28);c.moveTo(x,y+9);c.lineTo(x+31,y+28);c.stroke();
+    if(ready)c.drawImage(this.craneSheet,1000,396,174,296,Math.round(x-10),Math.round(y-24),20,34);
+    else{c.fillStyle='#ffd43b';c.fillRect(x-8,y-22,16,20);}
+  }
   pixelText(text:string,x:number,y:number,color:string,size=16){
     const c=this.ctx,t=c.getTransform(),dpr=Math.min(devicePixelRatio||1,2),visibleWidth=this.canvas.width/dpr;
     x=(t.a*x+t.e)/dpr;y=(t.d*y+t.f)/dpr;c.save();c.setTransform(dpr,0,0,dpr,0,0);

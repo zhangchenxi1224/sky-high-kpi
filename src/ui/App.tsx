@@ -38,7 +38,7 @@ const instructions=[
   ['体测','第 4 层起固定 4%；竞赛+志愿 ≥ 30 达标，否则后 1～3 投摆速/幅 +15%',12],
   ['冰美式','未来 5 秒摆速 −45%',5],
   ['邪修秘籍','GPA +0.10，后三投摆幅 −30%',6],
-  ['赛博诱惑','GPA −0.15，难度回退 6 层；也可免费跳过',11],
+  ['赛博诱惑','GPA −0.15，难度暂缓 6 / 4 / 2 层，不叠加；每落稳一块非诱惑砖恢复一档。出现后至少间隔 3 块，GPA 低于 0.30 时不再出现；可免费跳过',11],
 ] as const;
 export function App(){
   const canvas=useRef<HTMLCanvasElement>(null),engine=useRef<GameEngine>(new GameEngine(initialSeed,mode)),renderer=useRef<Renderer|null>(null),sound=useRef(new Sound());
@@ -151,8 +151,7 @@ export function App(){
       {!panel&&<BirdCompanion day={birdDay} feeding={feeding} bubbleEnabled={prefs.birdBubble} onFeed={feed}/>}
     </section>}
     {birdFlyaway&&<div className="bird-flyaway" aria-hidden="true"><img src={assetUrl('bird-fly.webp')} alt=""/></div>}
-    {!preview&&s.message&&s.elapsed<s.messageUntil&&!s.finished&&<div className="danmaku" role="status" key={s.message}>{s.message}</div>}
-    {!preview&&!s.finished&&s.elapsed-s.feverAt<3.2&&s.combo>=7&&<div className="danmaku fever-danmaku" key={`fever-${s.feverAt}`} aria-hidden="true">夯爆了！×{s.combo}</div>}
+    {!preview&&s.message&&s.elapsed<s.messageUntil&&!s.finished&&<div className="sr-only" role="status" key={s.message}>{s.message}</div>}
     <div className={`ddl-meter ${active&&s.ddl<=2?'urgent':''}`} aria-label={`DDL 剩余 ${active?Math.ceil(s.ddl):0} 秒`}><span className="ddl-title pixel-label">DDL</span><div className="ddl-clock">{active?<>{Math.ceil(s.ddl)}<small>s</small></>:'−'}</div><div className="ddl-track"><div style={{height:active?`${s.ddl/RULES.ddl*100}%`:'0%'}}/><i/><i/><i/></div></div>
     <div className="bottom-actions">
       {active&&s.current?.kind==='temptation'&&<button className="pixel-button red skip" onPointerDown={event=>{event.preventDefault();event.stopPropagation();engine.current.skipCurrentBlock();refresh();}} onClick={event=>{if(event.detail===0){engine.current.skipCurrentBlock();refresh();}}}>» 跳过诱惑</button>}

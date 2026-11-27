@@ -1,5 +1,7 @@
 import memes from '../config/memePack.json';
-export const RULES = {version:'2026.11.5', width:88, height:88, gravity:1400, ddl:6, perfect:.06, volunteerPerfect:.12, omegaMin:1.43,omegaMax:3.905,highPressureOmega:3.135,towerSway:true,fitnessChance:.04,fitnessKpi:30,fitnessBoost:.15};
+export const RULES = {version:'2026.11.6', width:88, height:88, gravity:1400, ddl:6, perfect:.06, volunteerPerfect:.12, omegaMin:1.43,omegaMax:3.905,highPressureOmega:3.135,towerSway:true,fitnessChance:.04,fitnessKpi:30,fitnessBoost:.15};
+export const TEMPTATION_RULES={cooldown:3,minGpa:.30,highPressureMultiplier:1.5,minDifficultyProgress:.65,reliefDecay:1};
+export const temptationRelief=(floor:number)=>floor<=20?6:floor<=40?4:2;
 export type Kind = 'study'|'research'|'competition'|'volunteer'|'practice'|'coffee'|'notes'|'temptation'|'fitness';
 export type KPI = {gpa:number;research:number;competition:number;volunteer:number;practice:number};
 export type Block = {id:string;kind:Kind;name:string;sprite:number;value:number};
@@ -8,7 +10,7 @@ export const clamp=(v:number,a:number,b:number)=>Math.max(a,Math.min(b,v));
 export const round=(v:number)=>Math.round((v+Number.EPSILON)*10000)/10000;
 export const score=(floor:number,k:KPI)=>Math.round(floor*10+k.gpa*100+k.research*30+k.competition*15+k.volunteer*5+k.practice*20);
 export function difficulty(n:number,rollback=0){
-  const effective=Math.max(1,n-rollback);
+  const effective=Math.max(1+(Math.max(1,n)-1)*TEMPTATION_RULES.minDifficultyProgress,n-clamp(rollback,0,6));
   const climbed=effective-1;
   const omega=RULES.omegaMin+(RULES.omegaMax-RULES.omegaMin)*(1-Math.exp(-climbed/26));
   const angle=18+27*(1-Math.exp(-climbed/22));
@@ -17,12 +19,12 @@ export function difficulty(n:number,rollback=0){
 export const judge=(delta:number,kind:Kind)=>Math.abs(delta)<=RULES.width*(kind==='volunteer'?.12:.06)+1e-9?'PERFECT':Math.abs(delta)<=RULES.width*.5+1e-9?'SUCCESS':'MISS';
 const drawKinds=['study','volunteer','practice','research','competition','coffee','notes','temptation','fitness'] as const;
 const drawSchedule=[
-  {floor:3,  percent:[60,25,15, 0, 0,0,0,0]},
-  {floor:8,  percent:[48,16,14, 8, 6,4,3,1]},
-  {floor:20, percent:[40,13,12,12,11,5,4,3]},
-  {floor:35, percent:[34,11,12,15,14,5,4,5]},
+  {floor:3,  percent:[60,25,15, 0, 0,0,0,0],temptation:0},
+  {floor:8,  percent:[48,16,14, 8, 6,4,3,1],temptation:.01},
+  {floor:20, percent:[40,13,12,12,11,5,4,3],temptation:.02},
+  {floor:35, percent:[34,11,12,15,14,5,4,5],temptation:.03},
 ];
-export function weights(n:number,boostTemptation=false){
+export function weights(n:number,boostTemptation=false,context:{recentTemptation?:boolean;gpa?:number}={}){
   const floor=clamp(n,drawSchedule[0].floor,drawSchedule.at(-1)!.floor);
   const index=drawSchedule.findIndex(row=>row.floor>=floor);
   const end=drawSchedule[index], start=drawSchedule[Math.max(0,index-1)];
@@ -31,8 +33,10 @@ export function weights(n:number,boostTemptation=false){
   const base=start.percent.map((p,i)=>(p+(end.percent[i]-p)*blend)/100);
   const temptation=drawKinds.indexOf('temptation');
   const original=base[temptation];
-  const selected=boostTemptation?Math.min(.10,original*2):original;
-  // Keep test's absolute temptation chance; fitness takes 4% from the other seven kinds.
+  const natural=start.temptation+(end.temptation-start.temptation)*blend;
+  const blocked=context.recentTemptation||(context.gpa??4)<TEMPTATION_RULES.minGpa;
+  const selected=blocked?0:natural*(boostTemptation?TEMPTATION_RULES.highPressureMultiplier:1);
+  // Keep fitness at 4%; redistribute protected temptation odds among positive categories.
   const fitness=n>=4?RULES.fitnessChance:0;
   return [...base.map((p,i)=>i===temptation?selected:p*(1-selected-fitness)/(1-original)),fitness];
 }
@@ -56,10 +60,10 @@ export const catalog:Block[]=[
   {id:'fitness',kind:'fitness',name:'体测训练室',sprite:12,value:0},
   ...memes.temptationSkins.map(s=>({id:s.id,kind:'temptation' as Kind,name:s.name,sprite:s.sprite,value:-.15}))
 ];
-export function drawBlock(n:number,random:()=>number,highPressure:boolean,recentTemptation:boolean):Block {
+export function drawBlock(n:number,random:()=>number,highPressure:boolean,recentTemptation:boolean,gpa=4):Block {
   const pick=(list:Block[])=>({...list[Math.min(list.length-1,Math.floor(random()*list.length))]});
   let roll=random();
-  const odds=weights(n,highPressure&&!recentTemptation);
+  const odds=weights(n,highPressure,{recentTemptation,gpa});
   let index=0;
   while(index<odds.length-1&&roll>=odds[index]){
     roll-=odds[index++];
@@ -74,7 +78,8 @@ export function reward(kpi:KPI,block:Block,perfect:boolean,combo:number,practice
   if(block.kind==='fitness')return {kpi:k,label:'体测完成 · 无综测收益',multiplier};
   if(block.kind==='temptation'){
     k.gpa=Math.max(0,round(k.gpa-.15));
-    return {kpi:k,label:'GPA −0.15',multiplier};
+    const cost=round(kpi.gpa-k.gpa);
+    return {kpi:k,label:cost?`GPA −${cost.toFixed(2)}`:'GPA 0.00',multiplier};
   }
 
   const stat=block.kind==='study'||block.kind==='notes'?'gpa':block.kind;
@@ -143,4 +148,4 @@ export function getTitle(s:TitleStats){
   const rule=candidates.find(([,matches])=>matches)![0];
   return memes.titles.find(t=>t.rule===rule)!;
 }
-export const FIXED_SEQUENCE=['study','volunteer','practice','research','competition','fitness','coffee','notes',...memes.temptationSkins.map(s=>s.id)];
+export const FIXED_SEQUENCE=['study','volunteer','practice','research','competition','fitness','coffee','notes',...memes.temptationSkins.flatMap(s=>[s.id,'study','volunteer','practice'])];
