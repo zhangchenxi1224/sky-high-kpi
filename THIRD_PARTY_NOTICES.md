@@ -12,13 +12,15 @@
 
 `src/game/hook.ts` adapts the pendulum endpoint geometry from [`src/hook.js`](https://github.com/iamkun/tower_game/blob/c6fa84afe179b661fa71cf7cc8788d0c47ca2875/src/hook.js) and [`src/block.js`](https://github.com/iamkun/tower_game/blob/c6fa84afe179b661fa71cf7cc8788d0c47ca2875/src/block.js). The adapted function uses a sinusoidal angle and the sine/cosine endpoint projection. It returns offsets from the pivot and takes an explicit phase in radians, an amplitude in degrees, and a rope length.
 
-The upstream engine, cooljs dependency, assets, audio, HTML, analytics, three-life failure logic, old scoring, collision classifications, tower motion, and time-dependent difficulty callbacks are **not** included or claimed to be reused. The game state machine, fixed-step vertical drop, center-distance landing rules, one-miss game over, 8-second deadline, continuous difficulty, KPI ledger, buffs, temptation choices, camera, renderer, UI, and poster are new project code based on `sky_high_kpi.md`. This is a narrow geometry adaptation with a new rules engine, not an unchanged upstream fork.
+The upstream engine, cooljs dependency, assets, audio, HTML, analytics, three-life failure logic, old scoring, collision classifications, tower motion, and time-dependent difficulty callbacks are **not** included or claimed to be reused. The game state machine, fixed-step vertical drop, center-distance landing rules, one-miss game over, 6-second deadline, continuous difficulty, KPI ledger, buffs, temptation choices, camera, renderer, UI, and poster are new project code based on `sky_high_kpi.md`. This is a narrow geometry adaptation with a new rules engine, not an unchanged upstream fork.
 
 The latest supplied plan takes precedence over the older workspace adaptation document, which describes superseded sliding, bounce, and staged-year rules.
 
 ## Visual assets
 
 The campus building sprite sheet is a user-supplied project asset from the shared workspace. It is not an asset from `iamkun/tower_game`. Keep its provenance in the delivery manifest; this notice does not assign or independently verify its copyright.
+
+The fitness-room sprite and four bird animation images were restored unchanged from the user-supplied WeChat playable package on 2026-11-27. They are project-provided assets, not third-party library assets; no additional art license is inferred.
 
 ## Runtime packages
 

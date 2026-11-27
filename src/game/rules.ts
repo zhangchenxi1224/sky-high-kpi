@@ -1,6 +1,6 @@
 import memes from '../config/memePack.json';
-export const RULES = {version:'2026.11.3', width:88, height:88, gravity:1400, ddl:8, perfect:.06, volunteerPerfect:.12, omegaMin:1.43,omegaMax:3.905,highPressureOmega:3.135,towerSway:true};
-export type Kind = 'study'|'research'|'competition'|'volunteer'|'practice'|'coffee'|'notes'|'temptation';
+export const RULES = {version:'2026.11.5', width:88, height:88, gravity:1400, ddl:6, perfect:.06, volunteerPerfect:.12, omegaMin:1.43,omegaMax:3.905,highPressureOmega:3.135,towerSway:true,fitnessChance:.04,fitnessKpi:30,fitnessBoost:.15};
+export type Kind = 'study'|'research'|'competition'|'volunteer'|'practice'|'coffee'|'notes'|'temptation'|'fitness';
 export type KPI = {gpa:number;research:number;competition:number;volunteer:number;practice:number};
 export type Block = {id:string;kind:Kind;name:string;sprite:number;value:number};
 export const emptyKpi=():KPI=>({gpa:0,research:0,competition:0,volunteer:0,practice:0});
@@ -15,7 +15,7 @@ export function difficulty(n:number,rollback=0){
   return {effective,omega,angle};
 }
 export const judge=(delta:number,kind:Kind)=>Math.abs(delta)<=RULES.width*(kind==='volunteer'?.12:.06)+1e-9?'PERFECT':Math.abs(delta)<=RULES.width*.5+1e-9?'SUCCESS':'MISS';
-const drawKinds=['study','volunteer','practice','research','competition','coffee','notes','temptation'] as const;
+const drawKinds=['study','volunteer','practice','research','competition','coffee','notes','temptation','fitness'] as const;
 const drawSchedule=[
   {floor:3,  percent:[60,25,15, 0, 0,0,0,0]},
   {floor:8,  percent:[48,16,14, 8, 6,4,3,1]},
@@ -29,10 +29,12 @@ export function weights(n:number,boostTemptation=false){
   const t=index===0?0:(floor-start.floor)/(end.floor-start.floor);
   const blend=t*t*(3-2*t);
   const base=start.percent.map((p,i)=>(p+(end.percent[i]-p)*blend)/100);
-  if(!boostTemptation)return base;
   const temptation=drawKinds.indexOf('temptation');
-  const original=base[temptation], boosted=Math.min(.10,original*2);
-  return base.map((p,i)=>i===temptation?boosted:p*(1-boosted)/(1-original));
+  const original=base[temptation];
+  const selected=boostTemptation?Math.min(.10,original*2):original;
+  // Keep test's absolute temptation chance; fitness takes 4% from the other seven kinds.
+  const fitness=n>=4?RULES.fitnessChance:0;
+  return [...base.map((p,i)=>i===temptation?selected:p*(1-selected-fitness)/(1-original)),fitness];
 }
 export const seeded=(seed:number)=>()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};
 export const catalog:Block[]=[
@@ -51,6 +53,7 @@ export const catalog:Block[]=[
   {id:'practice_one',kind:'practice',name:'收藏夹实践课',sprite:4,value:1},
   {id:'coffee',kind:'coffee',name:'续命冰美式',sprite:5,value:0},
   {id:'notes',kind:'notes',name:'复习邪修秘籍',sprite:6,value:.1},
+  {id:'fitness',kind:'fitness',name:'体测训练室',sprite:12,value:0},
   ...memes.temptationSkins.map(s=>({id:s.id,kind:'temptation' as Kind,name:s.name,sprite:s.sprite,value:-.15}))
 ];
 export function drawBlock(n:number,random:()=>number,highPressure:boolean,recentTemptation:boolean):Block {
@@ -68,6 +71,7 @@ export function reward(kpi:KPI,block:Block,perfect:boolean,combo:number,practice
   const comboMultiplier=perfect?1+Math.min(combo,10)*.1:1;
   const multiplier=comboMultiplier*(practiceBuff?1.25:1);
   if(block.kind==='coffee')return {kpi:k,label:'冰美式 · 减速 5 秒',multiplier};
+  if(block.kind==='fitness')return {kpi:k,label:'体测完成 · 无综测收益',multiplier};
   if(block.kind==='temptation'){
     k.gpa=Math.max(0,round(k.gpa-.15));
     return {kpi:k,label:'GPA −0.15',multiplier};
@@ -90,10 +94,30 @@ export function reward(kpi:KPI,block:Block,perfect:boolean,combo:number,practice
   if(extra>0)label+=`（实践多赚 ${extra}${unit}）`;
   return {kpi:k,label,multiplier};
 }
+export type SocialId='extrovert'|'introvert'|'ambivert'|'spectator';
+export type SocialMetrics={id:SocialId;academic:number;social:number;delta:number};
+export function socialMetrics(k:KPI):SocialMetrics{
+  const nGpa=clamp(k.gpa/4,0,1),nResearch=clamp(k.research/15,0,1),nCompetition=clamp(k.competition/30,0,1),nVolunteer=clamp(k.volunteer/30,0,1),nPractice=clamp(k.practice/15,0,1);
+  const academic=nGpa*.65+nResearch*.35;
+  const social=nCompetition*.3+nVolunteer*.4+nPractice*.3;
+  const delta=social-academic;
+  const id:SocialId=Math.max(academic,social)<.2?'spectator':delta>=.15?'extrovert':delta<=-.15?'introvert':'ambivert';
+  return {id,academic,social,delta};
+}
+export function getSocialProfile(k:KPI){
+  const metrics=socialMetrics(k);
+  return {metrics,profile:memes.socialProfiles.find(p=>p.id===metrics.id)!};
+}
 export type TitleStats={floor:number;kpi:KPI;accepted:number;maxSkipStreak:number;maxCombo:number;researchImperfect:number;counts:Partial<Record<Kind,number>>};
 export function getTitle(s:TitleStats){
-  const k=s.kpi;const volunteerValue=k.volunteer*5+k.practice*20;
-  const rule=s.accepted>=3?'temptation':s.maxSkipStreak>=3&&s.floor>20?'resist':volunteerValue>Math.max(k.gpa*100,k.research*30,k.competition*15)&&s.maxCombo>=3?'volunteer':(s.counts.research??0)>=Math.max(1,...Object.values(s.counts))&&s.researchImperfect>=2?'research':s.floor>=30&&k.gpa>=3.8?'champion':s.floor<=5?'early':'default';
+  const k=s.kpi;const volunteerValue=k.volunteer*5+k.practice*20;const social=socialMetrics(k);
+  const nGpa=clamp(k.gpa/4,0,1),nResearch=clamp(k.research/15,0,1),nCompetition=clamp(k.competition/30,0,1),nVolunteer=clamp(k.volunteer/30,0,1),nPractice=clamp(k.practice/15,0,1);
+  const comeback=s.floor>=20&&nGpa<=.75&&Math.max(nCompetition,nPractice)>=.5&&s.maxCombo>=3;
+  const allRounder=s.floor>=25&&[nGpa,nResearch,nCompetition,nVolunteer,nPractice].every(v=>v>=.55);
+  const projectStar=s.floor>=15&&social.social>=.62&&(nCompetition+nPractice)/2>=.55;
+  const libraryHermit=s.floor>=15&&social.academic>=.65&&social.id==='introvert';
+  const exactScore=score(s.floor,k);
+  const rule=exactScore===1103?'chenze1103':s.accepted>=3?'temptation':s.maxSkipStreak>=3&&s.floor>20?'resist':comeback?'comeback':s.floor>=30&&k.gpa>=3.8?'champion':allRounder?'allRounder':projectStar?'projectStar':volunteerValue>Math.max(k.gpa*100,k.research*30,k.competition*15)&&s.maxCombo>=3?'volunteer':(s.counts.research??0)>=Math.max(1,...Object.values(s.counts))&&s.researchImperfect>=2?'research':libraryHermit?'libraryHermit':s.floor<=5?'early':'default';
   return memes.titles.find(t=>t.rule===rule)!;
 }
-export const FIXED_SEQUENCE=['study','volunteer','practice','research','competition','coffee','notes',...memes.temptationSkins.map(s=>s.id)];
+export const FIXED_SEQUENCE=['study','volunteer','practice','research','competition','fitness','coffee','notes',...memes.temptationSkins.map(s=>s.id)];

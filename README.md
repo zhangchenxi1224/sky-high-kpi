@@ -1,8 +1,8 @@
 # 绩点卷上天 · Sky-High KPI
 
-像素校园主题的单命无尽堆叠 H5 游戏：一键松钩，在 8 秒 DDL 里，把大学叠成天空的形状。
+像素校园主题的单命无尽堆叠 H5 游戏：一键松钩，在 6 秒 DDL 里，把大学叠成天空的形状。
 
-**[在线试玩（免登录，支持手机）](https://sky-high-kpi-campus-20261125.nevilleatkinson25.chatgpt.site)** · **[下载离线版与部署包](https://github.com/zhangchenxi1224/sky-high-kpi/releases/latest)** · **[实验方案](docs/game-design.md)** · **[验收记录](ACCEPTANCE.md)**
+**[在线试玩（免登录，支持手机）](https://sky-high-kpi-merged-20261127.nevilleatkinson25.chatgpt.site)** · **[下载离线版与部署包](https://github.com/zhangchenxi1224/sky-high-kpi/releases/latest)** · **[实验方案](docs/game-design.md)** · **[验收记录](ACCEPTANCE.md)**
 
 ![游戏首屏](docs/screenshots/home.jpg)
 
@@ -10,7 +10,7 @@
 
 ## 开始玩
 
-- 直接玩：[公开试玩链接](https://sky-high-kpi-campus-20261125.nevilleatkinson25.chatgpt.site)，无需 ChatGPT 登录。
+- 直接玩：[公开试玩链接](https://sky-high-kpi-merged-20261127.nevilleatkinson25.chatgpt.site)，无需 ChatGPT 登录。
 - 离线玩：从 [Releases](https://github.com/zhangchenxi1224/sky-high-kpi/releases/latest) 下载交付包，解压后打开 `绩点卷上天-离线版.html`；Windows 也可运行 `启动游戏.cmd`。
 - 本地开发：使用 Node.js 22 或更新版本，执行以下命令。
 
@@ -25,7 +25,7 @@ npm run dev
 
 | 命令 | 用途 |
 | --- | --- |
-| `npm test` | 运行 26 项规则与状态机测试 |
+| `npm test` | 运行 47 项规则、称号与状态机测试 |
 | `npm run build` | TypeScript 检查并构建静态站到 `dist/` |
 | `npm run preview` | 本地预览生产构建 |
 | `npm run delivery` | 从已构建的 `dist/` 生成离线 HTML、启动器、静态包和说明 |
@@ -38,16 +38,25 @@ npm run dev
 
 点击首页中央的「开始卷楼」开局。局内点击画面、点击松钩按钮或按空格松钩，按 S 跳过当前诱惑。点击右上角「暂停」或按 Esc 可暂停，在暂停菜单里可继续或重新开局。校园公告栏包含五维账本、玩法、日落/星空切换、本机成绩榜。切换到其他页面会自动暂停，返回后手动继续。
 
+## 本次合并（2026-11-27）
+
+来源：GitHub test `b3537c4` + main `7ae745e` + 用户提供的微信试玩包。详细取舍与源码位置见 [合并说明](docs/merge-20261127.md)。
+
+- 保留 test 的平滑概率、收益与细腻塔楼动画，DDL 采用 6 秒。
+- 加入体测训练室，固定 4% 抽取；素材完整覆盖 13 款砖块。
+- 加入首页小鸟、口粮、喂食与气泡开关，兼容微信版已有的本地存储键。口粮库存最多 8 粒，喂食后可再通过游戏补充；本地日期切换时重置。
+- 保留像素弹窗、12 套结算称号和 4 种社交属性。
+
 ## 已实现
 
 - READY → SWINGING → DROPPING → RESOLVE → CAMERA_SHIFT → GAME_OVER，单命结束，无毕业强制弹窗。
 - 统一 88×88 世界单位砖宽与高度、重力 1400 单位/s²、纯竖直自由下落，位置保留，不裁切、不漂移、不整塔倾覆。
 - PERFECT 为 6%，志愿砖 12%；中心偏差 ≤50% 落稳，超出落空。完美仅吸附最多 2 单位，保留真实歪楼。
-- 8 秒 DDL、最后 2 秒边缘红光/心跳预警、到期强制提交。
+- 6 秒 DDL、最后 2 秒边缘红光/心跳预警、到期强制提交。
 - 随有效层数连续增加的吊车摆速与摆幅、六大类收益、所有 Buff、五款可接受/跳过的诱惑皮肤。
 - 实时楼层 / GPA / 综测、连击、收益浮字、金色粒子、落地挤压、合成音乐及音效。
 - 操场地基、楼顶天际线、日落、深空渐变；手机竖屏与桌面横屏自适应。
-- 本机成绩榜、七套称号、1080×1500 PNG 结业海报（真实塔形、五维雷达图、红章、二维码），可下载或移动端长按保存。
+- 本机成绩榜、十二套称号与四种社交属性、1080×1500 PNG 结业海报（真实塔形、五维雷达图、红章、二维码），可下载或移动端长按保存。
 - React + Vite + TypeScript + Canvas + Zustand + Tailwind CSS + ZzFX + qrcode，无后端、无追踪脚本。
 
 ## 规则补充与解释
@@ -59,7 +68,7 @@ npm run dev
 3. 实践 +25% 乘接下来两块落稳砖的正向 KPI（不乘楼层10分、不放大负 GPA）。跳过不占实践奖励次数。这样总分始终严格等于五维总公式。
 4. 科研 +12% 与竞赛 +15% 仅对下一次挂砖生效；秘籍对接下来三次挂砖生效，跳过也消耗该次挂砖的临时效果。冰美式五秒采用可暂停的模拟时钟。
 5. “连续跳过诱惑”只按连续诱惑选择计数；中间正常砖不会打断，接受诱惑会打断。
-6. 自然局分八类抽取，同类等概率。[概率表](docs/game-design.md#三自然局无尽抽取节奏极简平滑版)按目标层数平滑过渡。实际摆速达到 3.135 rad/s 且最近四抽未出诱惑时，该次诱惑概率翻倍，最高 10%。
+6. 自然局分九类抽取，同类等概率。[概率表](docs/game-design.md#三自然局无尽抽取节奏极简平滑版)按目标层数平滑过渡。实际摆速达到 3.135 rad/s 且最近四抽未出诱惑时，该次诱惑概率翻倍，最高 10%。第 4 目标层起体测固定 4%，诱惑概率不变，其余七类按比例缩减。
 7. 摆速从 1.43 rad/s 逐渐接近 3.905，最大摆角从 18° 逐渐接近 45°。接住诱惑后按回退的有效层数计算。
 8. 前两层固定镜头，第 3～6 层拉远，之后约 5¾ 层可见。松钩前，吊砖在最低点距楼顶至少 1.6 块砖高（竖屏）或 2.5 块砖高（横屏）。横屏高层约可见 5½ 层。细腻模式下，楼越高，整座塔的慢摆越明显；搭偏会额外引起回弹和余晃，连续对齐后逐渐回稳。可在校区切回经典模式。
 
@@ -74,6 +83,8 @@ npm run dev
 | `src/ui/App.tsx` | HUD、设置、结算、键盘/触控、固定测试局 |
 | `src/config/memePack.json` | 诱惑皮肤、操作弹幕、称号和评语；修改后重新构建 |
 | `src/features/poster.ts` | 离屏高清海报与真实塔形 |
+| `src/features/bird.ts` / `src/ui/BirdCompanion.tsx` | 小鸟口粮存储、气泡定位、飞行与喂食 |
+| `public/assets/fitness.webp` / `public/assets/bird-*.webp` | 微信包原始体测与小鸟素材 |
 | `src/features/audio.ts` | 手势后初始化 ZzFX，五声音阶反馈和轻量配乐 |
 | `art/rooms-original.png` | 用户工作区已有的双窗楼块原始透明精灵 |
 | `public/assets/rooms.webp` | 像素内容无损等价编码，减少下载体积 |
