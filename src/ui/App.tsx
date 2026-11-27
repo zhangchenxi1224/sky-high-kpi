@@ -44,7 +44,7 @@ export function App(){
   const canvas=useRef<HTMLCanvasElement>(null),engine=useRef<GameEngine>(new GameEngine(initialSeed,mode)),renderer=useRef<Renderer|null>(null),sound=useRef(new Sound());
   const [s,setS]=useState(engine.current.snapshot()),[panel,setPanel]=useState<'campus'|'rules'|'records'|null>(null);
   const autoRef=useRef(false);const [auto,setAuto]=useState(false),[fps,setFps]=useState(0);
-  const prefs=usePreferences(),[assetReady,setAssetReady]=useState(false);const best=prefs.records[0];
+  const prefs=usePreferences(),[assetReady,setAssetReady]=useState(false);
   const [transitioning,setTransitioning]=useState(false),transitionRef=useRef(false);
   const [reducedMotion,setReducedMotion]=useState(()=>matchMedia('(prefers-reduced-motion: reduce)').matches);
   useEffect(()=>{const media=matchMedia('(prefers-reduced-motion: reduce)'),update=()=>setReducedMotion(media.matches);media.addEventListener('change',update);return()=>media.removeEventListener('change',update);},[]);
@@ -146,7 +146,6 @@ export function App(){
     {preview&&<section className="welcome arcade-home" aria-label="开始游戏">
       <div className="welcome-copy"><h1><img className="game-logo" src={assetUrl('title.svg')} alt="Don't Collapse, MY GPA!"/></h1></div>
       <div className="home-start"><button className="arcade-button start-game" onClick={()=>{if(transitionRef.current)return;void sound.current.unlock();transitionRef.current=true;setTransitioning(true);}} disabled={!assetReady||transitioning}><span aria-hidden="true">▶</span>{assetReady?'开始游戏':'加载中…'}</button>
-        {best&&<div className="best-note">BEST {best.floor}F · {String(best.score).padStart(5,'0')}</div>}
         {mode==='fixed'&&<div className="welcome-links"><a className="text-link play-random" href={randomPlayUrl.href}>去随机试玩</a></div>}
       </div>
       {!panel&&<BirdCompanion day={birdDay} feeding={feeding} bubbleEnabled={prefs.birdBubble} onFeed={feed}/>}
