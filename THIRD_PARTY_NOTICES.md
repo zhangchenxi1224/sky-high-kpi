@@ -24,7 +24,7 @@ The fitness-room sprite and four bird animation images were restored unchanged f
 
 ## Ark Pixel Font
 
-The bilingual title SVG contains glyph outlines from [TakWolf/ark-pixel-font](https://github.com/TakWolf/ark-pixel-font), release `2026.11.10`, 12px proportional Simplified Chinese font. The font is licensed under SIL Open Font License 1.1; the full notice is preserved in `public/ARK_PIXEL_OFL.txt` and the generated runtime/offline license bundle. No remote font request is needed. Rebuild the artwork with `scripts/make-title.py` and the official font ZIP.
+The English title SVG contains glyph outlines from [TakWolf/ark-pixel-font](https://github.com/TakWolf/ark-pixel-font), release `2026.11.10`, 12px proportional Simplified Chinese font. The font is licensed under SIL Open Font License 1.1; the full notice is preserved in `public/ARK_PIXEL_OFL.txt` and the generated runtime/offline license bundle. No remote font request is needed. Rebuild the artwork with `scripts/make-title.py` and the official font ZIP.
 
 ## Runtime package licenses
 

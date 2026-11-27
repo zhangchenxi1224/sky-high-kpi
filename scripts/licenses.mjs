@@ -1,5 +1,5 @@
 import {readFile,writeFile,readdir} from 'node:fs/promises';
-const texts=['再卷一块砖 | Don\u0027t Collapse, MY GPA! — third-party software notices\n\nCampus room art: user-provided project asset; skyline and interface drawn for this project.\n', 'iamkun/tower_game, revision c6fa84afe179b661fa71cf7cc8788d0c47ca2875\n'+await readFile('vendor/tower-game/LICENSE','utf8')];
+const texts=['Don\u0027t Collapse, MY GPA! — third-party software notices\n\nCampus room art: user-provided project asset; skyline and interface drawn for this project.\n', 'iamkun/tower_game, revision c6fa84afe179b661fa71cf7cc8788d0c47ca2875\n'+await readFile('vendor/tower-game/LICENSE','utf8')];
 texts.push('Ark Pixel Font — title artwork outlines (release 2026.11.10)\n'+await readFile('public/ARK_PIXEL_OFL.txt','utf8'));
 for(const name of ['react','react-dom','scheduler','zustand','qrcode','dijkstrajs','tailwindcss']){
   const files=await readdir(`node_modules/${name}`);const license=files.find(f=>/^licen[cs]e(?:\.|$)/i.test(f));if(!license)throw Error(`Missing license for ${name}`);

@@ -1,4 +1,4 @@
-# 再卷一块砖 | Don't Collapse, MY GPA!
+# Don't Collapse, MY GPA!
 
 像素校园主题的单命无尽堆叠 H5 游戏：一键松钩，在 6 秒 DDL 里，把大学叠成天空的形状。
 
@@ -11,7 +11,7 @@
 ## 开始玩
 
 - 直接玩：[公开试玩链接](https://sky-high-kpi-merged-20261127.nevilleatkinson25.chatgpt.site)，无需 ChatGPT 登录。
-- 离线玩：从 [Releases](https://github.com/zhangchenxi1224/sky-high-kpi/releases/latest) 下载交付包，解压后打开 `再卷一块砖-离线版.html`；Windows 也可运行 `启动游戏.cmd`。
+- 离线玩：从 [Releases](https://github.com/zhangchenxi1224/sky-high-kpi/releases/latest) 下载交付包，解压后打开 `Dont-Collapse-MY-GPA-Offline.html`；Windows 也可运行 `启动游戏.cmd`。
 - 本地开发：使用 Node.js 22 或更新版本，执行以下命令。
 
 ```bash
@@ -40,7 +40,7 @@ npm run dev
 
 ## 界面更新（2026-11-28）
 
-- 首页沿用校园背景和小鸟，改为金色双语像素艺术字、开始游戏与 BEST 纪录；删除旧副标题和功能标签。
+- 首页沿用校园背景和小鸟，改为金色英文像素艺术字、开始游戏与 BEST 纪录；删除旧副标题和功能标签。
 - 左上角采用深炭黑、米白细边和淡金数字：第一行楼层 / GPA，第二行科研、竞赛、志愿、实践的像素图标与数值，无内部子框。
 - Buff / Debuff 在主框下方 6px 独立纵向排列，无状态不渲染；显示咖啡剩余秒数和各类状态剩余次数，暂停时冻结。
 - DDL、综测分数和主操作按钮使用统一黑金边框，增益提示作为弹幕横穿天空。

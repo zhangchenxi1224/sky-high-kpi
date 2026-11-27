@@ -118,7 +118,7 @@ export function App(){
   const openPanel=(p:typeof panel)=>{if(engine.current.phase!=='READY'&&!engine.current.finished)engine.current.paused=true;setPanel(p);refresh();};
   const closePanel=()=>{setPanel(null);engine.current.paused=false;refresh();};
   const active=s.phase==='SWINGING';const preview=s.phase==='READY';
-  return <main className={`game-shell ${preview?'is-home':''} ${s.finished?'is-finished':''} ${s.paused?'is-paused':''}`} aria-label="再卷一块砖游戏">
+  return <main className={`game-shell ${preview?'is-home':''} ${s.finished?'is-finished':''} ${s.paused?'is-paused':''}`} aria-label="Don't Collapse, MY GPA!">
     <canvas ref={canvas} className="game-canvas" onPointerDown={preview?undefined:drop} aria-label="游戏画面：点击或按空格松钩"/>
     <GameHud s={s}/>
     <nav className="top-controls" aria-label="游戏设置">
@@ -129,7 +129,7 @@ export function App(){
     </nav>
     {mode==='fixed'&&!s.finished&&<><button className="demo-button" aria-pressed={auto} onClick={()=>{autoRef.current=!autoRef.current;setAuto(autoRef.current);if(preview)engine.current.start();refresh();}}>{auto?'关闭自动演示':swayDemo?'演示搭偏与回稳':'自动演示全部砖块'}</button><output className="fps-readout">{fps} FPS · DPR {Number(Math.min(devicePixelRatio,2).toFixed(2))}</output></>}
     {preview&&<section className="welcome arcade-home" aria-label="开始游戏">
-      <div className="welcome-copy"><h1><img className="game-logo" src={assetUrl('title.svg')} alt="再卷一块砖 | Don't Collapse, MY GPA!"/></h1></div>
+      <div className="welcome-copy"><h1><img className="game-logo" src={assetUrl('title.svg')} alt="Don't Collapse, MY GPA!"/></h1></div>
       <div className="home-start"><button className="arcade-button start-game" onClick={start} disabled={!assetReady}><span aria-hidden="true">▶</span>{assetReady?'开始游戏':'加载中…'}</button>
         {best&&<div className="best-note">BEST {best.floor}F · {String(best.score).padStart(5,'0')}</div>}
         {mode==='fixed'&&<div className="welcome-links"><a className="text-link play-random" href={randomPlayUrl.href}>去随机试玩</a></div>}

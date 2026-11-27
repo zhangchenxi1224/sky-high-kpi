@@ -36,18 +36,18 @@ def run(text, x, y, width, height, spacing=0):
         cursor += glyphs[name].width + spacing
     return ' '.join(paths)
 
-cn = run('再卷一块砖', 85, 24, 730, 139)
-en = run("Don't Collapse, MY GPA!", 82, 207, 736, 43, 25)
+headline = run("Don't Collapse,", 55, 25, 790, 86, 25)
+subtitle = run('MY GPA!', 174, 155, 552, 92, 25)
 svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="900" height="280" viewBox="0 0 900 280">
-<title>再卷一块砖 | Don't Collapse, MY GPA!</title>
+<title>Don't Collapse, MY GPA!</title>
 <!-- Glyph outlines: Ark Pixel Font 12px, 2026.11.10, SIL OFL 1.1. -->
-<defs><linearGradient id="gold" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#fff6ad"/><stop offset=".12" stop-color="#ffe98d"/><stop offset=".18" stop-color="#ffdc42"/><stop offset=".73" stop-color="#ffcf25"/><stop offset="1" stop-color="#e9a218"/></linearGradient><path id="cn" d="{cn}"/><path id="en" d="{en}"/></defs>
+<defs><linearGradient id="gold" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#fff6ad"/><stop offset=".12" stop-color="#ffe98d"/><stop offset=".18" stop-color="#ffdc42"/><stop offset=".73" stop-color="#ffcf25"/><stop offset="1" stop-color="#e9a218"/></linearGradient><path id="headline" d="{headline}"/><path id="subtitle" d="{subtitle}"/></defs>
 <g stroke-linejoin="miter">
-<g transform="translate(1 12)" fill="#17223e" stroke="#17223e" stroke-width="19"><use href="#cn"/><use href="#en"/></g>
-<g fill="url(#gold)" stroke="#17223e" stroke-width="15" paint-order="stroke"><use href="#cn"/><use href="#en"/></g>
-<g fill="url(#gold)" stroke="url(#gold)" stroke-width="5" paint-order="stroke"><use href="#cn"/><use href="#en"/></g>
-<path d="M17 218h40v21H17Z M844 218h40v21H844Z" fill="url(#gold)" stroke="#17223e" stroke-width="10"/>
-<path d="M20 221h34 M848 221h33" stroke="#fff8bd" stroke-width="4"/>
+<g transform="translate(1 12)" fill="#17223e" stroke="#17223e" stroke-width="19"><use href="#headline"/><use href="#subtitle"/></g>
+<g fill="url(#gold)" stroke="#17223e" stroke-width="15" paint-order="stroke"><use href="#headline"/><use href="#subtitle"/></g>
+<g fill="url(#gold)" stroke="url(#gold)" stroke-width="5" paint-order="stroke"><use href="#headline"/><use href="#subtitle"/></g>
+<path d="M65 190h73v25H65Z M762 190h73v25H762Z" fill="url(#gold)" stroke="#17223e" stroke-width="10"/>
+<path d="M68 193h67 M766 193h66" stroke="#fff8bd" stroke-width="4"/>
 </g></svg>'''
 Path('public/assets/title.svg').write_text(svg, encoding='utf-8')
 Path('public/ARK_PIXEL_OFL.txt').write_bytes(archive.read('OFL.txt'))
