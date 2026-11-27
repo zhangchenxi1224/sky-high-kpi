@@ -1,6 +1,6 @@
 import memes from '../config/memePack.json';
-export const RULES = {version:'2026.11.4', width:88, height:88, gravity:1400, ddl:6, perfect:.06, volunteerPerfect:.12, omegaMin:1.2,omegaMax:3.8,towerSway:true};
-export type Kind = 'study'|'research'|'competition'|'volunteer'|'practice'|'coffee'|'notes'|'temptation';
+export const RULES = {version:'2026.11.5', width:88, height:88, gravity:1400, ddl:6, perfect:.06, volunteerPerfect:.12, omegaMin:1.2,omegaMax:3.8,towerSway:true,fitnessChance:.04,fitnessKpi:30,fitnessBoost:.15};
+export type Kind = 'study'|'research'|'competition'|'volunteer'|'practice'|'fitness'|'coffee'|'notes'|'temptation';
 export type KPI = {gpa:number;research:number;competition:number;volunteer:number;practice:number};
 export type Block = {id:string;kind:Kind;name:string;sprite:number;value:number};
 export const emptyKpi=():KPI=>({gpa:0,research:0,competition:0,volunteer:0,practice:0});
@@ -25,6 +25,7 @@ export const catalog:Block[]=[
   {id:'practice',kind:'practice',name:'社会实践',sprite:4,value:2},
   {id:'survey',kind:'practice',name:'调研报告',sprite:4,value:3},
   {id:'practice_one',kind:'practice',name:'收藏夹实践课',sprite:4,value:1},
+  {id:'fitness',kind:'fitness',name:'体测训练室',sprite:12,value:0},
   {id:'coffee',kind:'coffee',name:'续命冰美式',sprite:5,value:0},
   {id:'notes',kind:'notes',name:'复习邪修秘籍',sprite:6,value:.1},
   ...memes.temptationSkins.map(s=>({id:s.id,kind:'temptation' as Kind,name:s.name,sprite:s.sprite,value:-.15}))
@@ -33,6 +34,7 @@ export function drawBlock(n:number,random:()=>number,highPressure:boolean,recent
   const pick=(list:Block[])=>({...list[Math.min(list.length-1,Math.floor(random()*list.length))]});
   const boosted=highPressure&&!recentTemptation;
   if(boosted&&random()<.2)return pick(catalog.filter(b=>b.kind==='temptation'));
+  if(n>=4&&random()<RULES.fitnessChance)return pick(catalog.filter(b=>b.kind==='fitness'));
   const kinds:Kind[]=['study','volunteer','practice','research','competition','coffee'];
   let roll=random();const w=weights(n);let kind:Kind='study';
   for(let i=0;i<w.length;i++){roll-=w[i];if(roll<=0){kind=kinds[i];break;}}
@@ -48,6 +50,7 @@ export function reward(kpi:KPI,block:Block,perfect:boolean,combo:number,practice
     k.gpa=Math.max(0,round(k.gpa-.15));
     return {kpi:k,label:'GPA −0.15',multiplier};
   }
+  if(block.kind==='fitness')return {kpi:k,label:'体测完成 · 无综测收益',multiplier};
 
   const stat=block.kind==='study'||block.kind==='notes'?'gpa':block.kind;
   const names={gpa:'GPA',research:'科研',competition:'竞赛',volunteer:'志愿',practice:'实践'};
@@ -92,4 +95,4 @@ export function getTitle(s:TitleStats){
   const rule=exactScore===1103?'chenze1103':s.accepted>=3?'temptation':s.maxSkipStreak>=3&&s.floor>20?'resist':comeback?'comeback':s.floor>=30&&k.gpa>=3.8?'champion':allRounder?'allRounder':projectStar?'projectStar':volunteerValue>Math.max(k.gpa*100,k.research*30,k.competition*15)&&s.maxCombo>=3?'volunteer':(s.counts.research??0)>=Math.max(1,...Object.values(s.counts))&&s.researchImperfect>=2?'research':libraryHermit?'libraryHermit':s.floor<=5?'early':'default';
   return memes.titles.find(t=>t.rule===rule)!;
 }
-export const FIXED_SEQUENCE=['study','volunteer','practice','research','competition','coffee','notes',...memes.temptationSkins.map(s=>s.id)];
+export const FIXED_SEQUENCE=['study','volunteer','practice','research','competition','fitness','coffee','notes',...memes.temptationSkins.map(s=>s.id)];

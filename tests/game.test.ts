@@ -44,6 +44,12 @@ test('base weights sum to one and keep courses available at every stage',()=>{
 test('fixed seeds reproduce natural draw streams',()=>{const a=seeded(42),b=seeded(42);for(let n=1;n<300;n++)assert.deepEqual(drawBlock(n,a,false,false),drawBlock(n,b,false,false));});
 test('high pressure offers 20% direct temptation when absent in four draws',()=>{const random=()=>.19;assert.equal(drawBlock(25,random,true,false).kind,'temptation');assert.notEqual(drawBlock(25,random,true,true).kind,'temptation');});
 test('remaining 80% of high-pressure draws cannot double count temptation',()=>{assert.notEqual(drawBlock(25,()=>.99,true,false).kind,'temptation');const r=seeded(823);let tempt=0;for(let i=0;i<10000;i++)if(drawBlock(25,r,true,false).kind==='temptation')tempt++;assert.ok(tempt>1850&&tempt<2150);});
+test('fitness block is four percent and never appears in the opening',()=>{
+  assert.notEqual(drawBlock(3,()=>.01,false,false).kind,'fitness');
+  assert.equal(drawBlock(10,()=>.01,false,false).kind,'fitness');
+  const r=seeded(20261127);let fitness=0;for(let i=0;i<20000;i++)if(drawBlock(20,r,false,false).kind==='fitness')fitness++;
+  assert.ok(fitness>700&&fitness<900,`fitness=${fitness}`);
+});
 test('GPA clamps and negative temptation is never multiplied',()=>{const k={...emptyKpi(),gpa:3.99};assert.equal(reward(k,block('major'),true,10,true).kpi.gpa,4);assert.equal(reward(k,block('tempt_hok'),true,10,true).kpi.gpa,3.84);assert.equal(reward(emptyKpi(),block('tempt_hok'),true,10,true).kpi.gpa,0);});
 test('score matches five-dimensional formula and competition raw units',()=>{assert.equal(score(10,{gpa:1.5,research:2,competition:5,volunteer:4,practice:3}),465);});
 test('research imperfect half value and perfect positive multiplier',()=>{assert.equal(reward(emptyKpi(),block('research'),false,0,false).kpi.research,1);assert.equal(reward(emptyKpi(),block('research'),true,1,false).kpi.research,2.2);});
@@ -64,13 +70,28 @@ test('successful offset stays real; PERFECT only corrects two pixels',()=>{const
 test('course grants two combo levels, success resets streak',()=>{const e=new GameEngine(3);land(e,'study');assert.equal(e.combo,2);approx(e.kpi.gpa,.216);next(e);land(e,'volunteer');assert.equal(e.combo,3);next(e);land(e,'research',25);assert.equal(e.combo,0);});
 test('research speed buff affects exactly the next block',()=>{const e=new GameEngine(3);land(e,'research');next(e);approx(e.speedMultiplier,1.12);land(e,'study');next(e);approx(e.speedMultiplier,1);});
 test('competition sway penalty only above 25% and lasts one draw',()=>{const e=new GameEngine(3);land(e,'competition',23);next(e);approx(e.angleMultiplier,1.15);land(e,'study');next(e);approx(e.angleMultiplier,1);});
+test('fitness keeps swing speed unchanged at thirty combined competition and volunteer',()=>{
+  const e=new GameEngine(3);e.kpi.competition=20;e.kpi.volunteer=10;land(e,'fitness');
+  assert.equal(e.fitnessLeft,0);next(e);
+  approx(e.params.omega,difficulty(e.floor+1).omega);approx(e.params.angle,difficulty(e.floor+1).angle);
+});
+test('fitness adds one to three boosted swings when the combined KPI is below thirty',()=>{
+  const e=new GameEngine(3);e.random=()=>.99;land(e,'fitness');
+  assert.equal(e.fitnessLeft,3);assert.deepEqual(reward(emptyKpi(),block('fitness'),true,10,true).kpi,emptyKpi());
+  for(let i=0;i<3;i++){
+    next(e);assert.equal(e.fitnessActive,true);
+    approx(e.params.omega,difficulty(e.floor+1).omega*1.15);approx(e.params.angle,difficulty(e.floor+1).angle*1.15);
+    land(e,'study');
+  }
+  next(e);assert.equal(e.fitnessActive,false);approx(e.params.omega,difficulty(e.floor+1).omega);
+});
 test('practice bonus lasts next two settled blocks',()=>{const e=new GameEngine(3);land(e,'practice',20);assert.equal(e.practiceLeft,2);next(e);land(e,'volunteer',20);assert.equal(e.kpi.volunteer,5);assert.equal(e.practiceLeft,1);next(e);land(e,'volunteer',20);assert.equal(e.kpi.volunteer,10);assert.equal(e.practiceLeft,0);next(e);land(e,'volunteer',20);assert.equal(e.kpi.volunteer,14);});
 test('coffee slows by 45% for five simulation seconds',()=>{const e=new GameEngine(3);land(e,'coffee');const t=e.coffeeUntil;approx(t-e.lastLandTime,5);next(e);approx(e.params.omega,difficulty(e.floor+1).omega*.55);e.update(4.6);approx(e.params.omega,difficulty(e.floor+1).omega);});
 test('notes narrow three subsequent draws by 30%',()=>{const e=new GameEngine(3);land(e,'notes',20);for(let i=0;i<3;i++){next(e);approx(e.angleMultiplier,.7);land(e,'study',20);}next(e);approx(e.angleMultiplier,1);});
 test('temptation accepts minus 0.15 and accumulates six rollback layers',()=>{const e=new GameEngine(3);e.kpi.gpa=1;land(e,'tempt_hok');assert.equal(e.kpi.gpa,.85);assert.equal(e.rollback,6);assert.equal(e.accepted,1);next(e);land(e,'tempt_selflove');assert.equal(e.rollback,12);assert.equal(e.kpi.gpa,.7);});
 test('skip never drops, deducts GPA, or increases floor; regular blocks cannot skip',()=>{const e=new GameEngine(3,'fixed');e.start();assert.equal(e.skipCurrentBlock(),false);e.current=block('tempt_hok');e.kpi.gpa=1;e.skipCurrentBlock();assert.equal(e.phase,'SWINGING');assert.equal(e.kpi.gpa,1);assert.equal(e.floor,0);assert.equal(e.skipped,1);assert.equal(e.ddl,RULES.ddl);});
 test('resisting consecutive temptation offers survives intervening regular blocks',()=>{const e=new GameEngine(3);e.start();for(let i=0;i<3;i++){e.current=block('tempt_hok');e.skipCurrentBlock();land(e,'study');next(e);}assert.equal(e.maxSkipStreak,3);});
-test('fixed scenario contains all 12 room sprites and five temptation skins',()=>{const e=new GameEngine(3,'fixed');e.start();const seen:number[]=[];for(let i=0;i<FIXED_SEQUENCE.length;i++){seen.push(e.current!.sprite);land(e,e.current!.id);next(e);}assert.equal(new Set(seen).size,12);});
+test('fixed scenario contains all 13 room sprites and five temptation skins',()=>{const e=new GameEngine(3,'fixed');e.start();const seen:number[]=[];for(let i=0;i<FIXED_SEQUENCE.length;i++){seen.push(e.current!.sprite);land(e,e.current!.id);next(e);}assert.equal(new Set(seen).size,13);});
 test('100 floors continue without graduation modal or cropped width',()=>{const e=new GameEngine(3,'fixed');for(let i=0;i<100;i++){land(e,'study');next(e);}assert.equal(e.floor,100);assert.equal(e.phase,'SWINGING');assert.equal(e.kpi.gpa,4);assert.equal(e.tower.length,100);});
 test('title priority prefers accepted temptation even with champion metrics',()=>{const s={floor:35,kpi:{...emptyKpi(),gpa:4},accepted:3,maxSkipStreak:0,maxCombo:10,researchImperfect:0,counts:{}};assert.equal(getTitle(s).rule,'temptation');assert.equal(getTitle({...s,accepted:0}).rule,'champion');});
 test('exact 1103 score unlocks the Chen Ze easter egg above every other title',()=>{

@@ -3,18 +3,29 @@ import {RULES,seeded} from '../game/rules';
 type Rect={x:number;y:number;w:number;h:number};
 const mix=(a:string,b:string,t:number)=>{const ca=parseInt(a.slice(1),16),cb=parseInt(b.slice(1),16);return `rgb(${[16,8,0].map(s=>Math.round(((ca>>s)&255)*(1-t)+((cb>>s)&255)*t)).join(',')})`;};
 export class Renderer {
-  ctx:CanvasRenderingContext2D;sheet=new Image();sprites:HTMLCanvasElement[]=[];width=960;height=720;scale=1;effects=true;night=false;
+  ctx:CanvasRenderingContext2D;sheet=new Image();fitness=new Image();sprites:HTMLCanvasElement[]=Array(13);width=960;height=720;scale=1;effects=true;night=false;
   sky:HTMLCanvasElement|null=null;skyKey='';
   private reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
-  constructor(public canvas:HTMLCanvasElement){this.ctx=canvas.getContext('2d')!;this.sheet.onload=()=>this.prepareSprites();this.sheet.src=(window as unknown as {__ROOMS__?:string}).__ROOMS__??`${import.meta.env.BASE_URL}assets/rooms.webp`;}
+  constructor(public canvas:HTMLCanvasElement){
+    this.ctx=canvas.getContext('2d')!;
+    this.sheet.onload=()=>this.prepareSprites();
+    this.sheet.src=(window as unknown as {__ROOMS__?:string}).__ROOMS__??`${import.meta.env.BASE_URL}assets/rooms.webp`;
+    this.fitness.onload=()=>this.prepareFitness();
+    this.fitness.src=(window as unknown as {__FITNESS__?:string}).__FITNESS__??`${import.meta.env.BASE_URL}assets/fitness.webp`;
+  }
+  get assetsReady(){return this.sprites.filter(Boolean).length===13;}
   prepareSprites(){
     const s=document.createElement('canvas');s.width=this.sheet.width;s.height=this.sheet.height;const c=s.getContext('2d')!;c.drawImage(this.sheet,0,0);const pixels=c.getImageData(0,0,s.width,s.height).data;
     for(let i=0;i<12;i++){
       const cell={x:Math.floor(i%4*s.width/4),y:Math.floor(Math.floor(i/4)*s.height/3),w:Math.floor(s.width/4),h:Math.floor(s.height/3)};
       let x0=cell.x+cell.w,y0=cell.y+cell.h,x1=cell.x,y1=cell.y;
       for(let y=cell.y;y<cell.y+cell.h;y++)for(let x=cell.x;x<cell.x+cell.w;x++){if(pixels[(y*s.width+x)*4+3]>100){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}}
-      const out=document.createElement('canvas');out.width=176;out.height=176;const oc=out.getContext('2d')!;oc.imageSmoothingEnabled=false;oc.drawImage(this.sheet,x0,y0,x1-x0+1,y1-y0+1,0,0,176,176);this.sprites.push(out);
+      const out=document.createElement('canvas');out.width=176;out.height=176;const oc=out.getContext('2d')!;oc.imageSmoothingEnabled=false;oc.drawImage(this.sheet,x0,y0,x1-x0+1,y1-y0+1,0,0,176,176);this.sprites[i]=out;
     }
+  }
+  prepareFitness(){
+    const out=document.createElement('canvas');out.width=176;out.height=176;const c=out.getContext('2d')!;
+    c.imageSmoothingEnabled=false;c.drawImage(this.fitness,0,0,176,176);this.sprites[12]=out;
   }
   resize(w:number,h:number,e:GameEngine){this.scale=w/h<.85?Math.min(w/430,h/760):h/720;this.width=w/this.scale;this.height=h/this.scale;const d=Math.min(devicePixelRatio||1,2);this.canvas.width=Math.round(w*d);this.canvas.height=Math.round(h*d);this.ctx.setTransform(this.scale*d,0,0,this.scale*d,0,0);e.setViewport(this.height);this.skyKey='';}
   rect(r:Rect,color:string){this.ctx.fillStyle=color;this.ctx.fillRect(Math.round(r.x),Math.round(r.y),Math.round(r.w),Math.round(r.h));}
