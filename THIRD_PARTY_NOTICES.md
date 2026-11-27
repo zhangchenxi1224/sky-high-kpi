@@ -22,6 +22,10 @@ The campus building sprite sheet is a user-supplied project asset from the share
 
 The fitness-room sprite and four bird animation images were restored unchanged from the user-supplied WeChat playable package on 2026-11-27. They are project-provided assets, not third-party library assets; no additional art license is inferred.
 
-## Runtime packages
+## Ark Pixel Font
+
+The bilingual title SVG contains glyph outlines from [TakWolf/ark-pixel-font](https://github.com/TakWolf/ark-pixel-font), release `2026.11.10`, 12px proportional Simplified Chinese font. The font is licensed under SIL Open Font License 1.1; the full notice is preserved in `public/ARK_PIXEL_OFL.txt` and the generated runtime/offline license bundle. No remote font request is needed. Rebuild the artwork with `scripts/make-title.py` and the official font ZIP.
+
+## Runtime package licenses
 
 Third-party runtime packages retain their own licenses in their installed distributions and package metadata. The source delivery includes `package-lock.json` for the exact resolved dependency versions.

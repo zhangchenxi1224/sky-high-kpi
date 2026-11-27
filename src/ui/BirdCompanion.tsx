@@ -26,7 +26,7 @@ export function BirdCompanion({day,feeding,bubbleEnabled,onFeed}:{day:BirdDay;fe
   useLayoutEffect(()=>{
     const update=()=>{
       if(!bird.current||!bubble.current)return;
-      const avoid=Array.from(bird.current.closest('.welcome')?.querySelectorAll(':scope > .drop,.welcome-links')??[]).map(el=>el.getBoundingClientRect());
+      const avoid=Array.from(bird.current.closest('.welcome')?.querySelectorAll('.start-game,.welcome-links,.welcome-copy,.best-note')??[]).map(el=>el.getBoundingClientRect());
       setPosition(placeBirdBubble(bird.current.getBoundingClientRect(),bubble.current.getBoundingClientRect(),{width:innerWidth,height:innerHeight},avoid));
     };
     update();window.addEventListener('resize',update);return()=>window.removeEventListener('resize',update);

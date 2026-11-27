@@ -65,7 +65,9 @@ export class Renderer {
       c.restore();
     }
     if(e.phase==='READY'){
-      this.rope(w/2,-48,w/2,132);this.room(0,w/2,156);this.label('高数',w/2+58,197,'#fff1cf');
+      const pivot=w>h?w*.85:w*.73,ropeEnd=w>h?h*.19:h*.11;
+      const drift=motionEnabled?Math.sin(performance.now()/1600)*14:0;
+      this.rope(pivot,-48,pivot+drift,ropeEnd);this.room(0,pivot+drift,ropeEnd+24);
     }else{
       const craneCenter=center+roofSway;
       if(e.phase==='SWINGING'){this.rope(craneCenter+e.anchorX,e.hookPivotY,craneCenter+e.hookX,e.hookY);}

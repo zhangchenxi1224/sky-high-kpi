@@ -7,7 +7,8 @@ const hookToBrick=24;
 export type Phase='READY'|'SWINGING'|'DROPPING'|'RESOLVE'|'CAMERA_SHIFT'|'GAME_OVER';
 export type Placed={block:Block;x:number;y:number;perfect:boolean};
 export type GameEvent={type:'start'|'spawn'|'drop'|'land'|'miss'|'over'|'skip'|'warning'|'message';text?:string;perfect?:boolean;combo?:number};
-export type Snapshot={phase:Phase;floor:number;kpi:KPI;score:number;ddl:number;current:Block|null;combo:number;maxCombo:number;perfects:number;accepted:number;skipped:number;maxSkipStreak:number;researchImperfect:number;counts:Partial<Record<Kind,number>>;paused:boolean;finished:boolean;forced:boolean;rollback:number;buffs:string[];message:string;messageUntil:number;rewardLabel:string;verdict:string;seed:number;mode:'normal'|'fixed';elapsed:number};
+export type ActiveStatus={id:string;tone:'positive'|'negative';symbol:string;label:string;description:string};
+export type Snapshot={phase:Phase;floor:number;kpi:KPI;score:number;ddl:number;current:Block|null;combo:number;maxCombo:number;perfects:number;accepted:number;skipped:number;maxSkipStreak:number;researchImperfect:number;counts:Partial<Record<Kind,number>>;paused:boolean;finished:boolean;forced:boolean;rollback:number;statuses:ActiveStatus[];buffs:string[];message:string;messageUntil:number;rewardLabel:string;verdict:string;seed:number;mode:'normal'|'fixed';elapsed:number};
 export class GameEngine {
   phase:Phase='READY';floor=0;kpi=emptyKpi();combo=0;maxCombo=0;perfects=0;accepted=0;skipped=0;skipStreak=0;maxSkipStreak=0;researchImperfect=0;counts:Partial<Record<Kind,number>>={};
   tower:Placed[]=[];current:Block|null=null;currentX=0;currentY=0;velocity=0;rotation=0;phaseAngle=-.65;hookAngle=0;hookX=0;hookY=0;anchorX=0;
@@ -17,7 +18,7 @@ export class GameEngine {
   instability=0;sway=0;private swayVelocity=0;landingFeedback='';
   readonly detailedMotion=new TowerMotion();
   speedNext=1;angleNext=1;speedMultiplier=1;angleMultiplier=1;practiceLeft=0;notesLeft=0;coffeeUntil=0;
-  fitnessLeft=0;fitnessActive=false;
+  fitnessLeft=0;fitnessActive=false;angleBoostActive=false;
   message='';messageUntil=0;rewardLabel='';verdict='';lastLandTime=-5;drawHistory:Kind[]=[];drawIndex=0;
   seed:number;mode:'normal'|'fixed';random:()=>number;listeners=new Set<(event:GameEvent)=>void>();private accumulator=0;private extremeAnnounced=false;
   constructor(seed=Date.now()>>>0,mode:'normal'|'fixed'='normal'){this.seed=seed;this.mode=mode;this.random=seeded(seed);}
@@ -61,6 +62,7 @@ export class GameEngine {
   get params(){const d=difficulty(this.floor+1,this.rollback),fitness=this.fitnessActive?1+RULES.fitnessBoost:1;return {...d,omega:d.omega*this.speedMultiplier*(this.coffeeRemaining>0?.55:1)*fitness,angle:d.angle*this.angleMultiplier*fitness};}
   start(){if(this.phase!=='READY')return false;this.emit({type:'start'});this.spawn();return true;}
   spawn(){
+    this.angleBoostActive=this.angleNext>1;
     this.fitnessActive=this.fitnessLeft>0;if(this.fitnessActive)this.fitnessLeft--;
     this.speedMultiplier=this.speedNext;this.speedNext=1;
     this.angleMultiplier=this.angleNext*(this.notesLeft>0?.7:1);this.angleNext=1;if(this.notesLeft>0)this.notesLeft--;
@@ -157,6 +159,16 @@ export class GameEngine {
     this.emit({type:'land',text:r.label,perfect,combo:this.combo});
   }
   snapshot():Snapshot {
+    const statuses:ActiveStatus[]=[];
+    const inFlight=this.phase==='SWINGING'||this.phase==='DROPPING';
+    const notes=this.notesLeft+(inFlight&&this.angleMultiplier<1?1:0);
+    const fitnessTurns=this.fitnessLeft+(inFlight&&this.fitnessActive?1:0);
+    if(this.coffeeRemaining>0)statuses.push({id:'coffee',tone:'positive',symbol:'❄',label:`−45% · ${Math.ceil(this.coffeeRemaining)}s`,description:`冰美式：摆速降低 45%，剩余 ${Math.ceil(this.coffeeRemaining)} 秒`});
+    if(notes>0)statuses.push({id:'notes',tone:'positive',symbol:'▤',label:`摆幅 −30% · ×${notes}`,description:`秘籍：摆幅降低 30%，剩余 ${notes} 投（含当前生效的一投）`});
+    if(this.practiceLeft>0)statuses.push({id:'practice',tone:'positive',symbol:'＋',label:`收益 +25% · ×${this.practiceLeft}`,description:`实践：正向收益增加 25%，剩余 ${this.practiceLeft} 块`});
+    if(this.speedNext>1||(inFlight&&this.speedMultiplier>1))statuses.push({id:'research',tone:'negative',symbol:'»',label:'摆速 +12% · ×1',description:'导师加活：摆速增加 12%，剩余 1 投'});
+    if(this.angleNext>1||(inFlight&&this.angleBoostActive))statuses.push({id:'competition',tone:'negative',symbol:'↔',label:'摆幅 +15% · ×1',description:'PPT 手抖：摆幅增加 15%，剩余 1 投'});
+    if(fitnessTurns>0)statuses.push({id:'fitness',tone:'negative',symbol:'↗',label:`速/幅 +15% · ×${fitnessTurns}`,description:`体测加练：摆速与摆幅增加 15%，剩余 ${fitnessTurns} 投`});
     const buffs:string[]=[];
     if(this.notesLeft>0||this.angleMultiplier<1)buffs.push('秘籍 · 摆幅 −30%');
     if(this.practiceLeft>0)buffs.push(`实践 +25% · 剩 ${this.practiceLeft} 块`);
@@ -164,6 +176,6 @@ export class GameEngine {
     if(this.angleMultiplier>1)buffs.push('PPT 手抖 +15%');
     const fitness=this.fitnessLeft+(this.fitnessActive?1:0);
     if(fitness>0)buffs.push(`体测加练 · ${fitness} 投摆速/幅 +15%`);
-    return {phase:this.phase,floor:this.floor,kpi:{...this.kpi},score:score(this.floor,this.kpi),ddl:this.ddl,current:this.current,combo:this.combo,maxCombo:this.maxCombo,perfects:this.perfects,accepted:this.accepted,skipped:this.skipped,maxSkipStreak:this.maxSkipStreak,researchImperfect:this.researchImperfect,counts:{...this.counts},paused:this.paused,finished:this.finished,forced:this.forced,rollback:this.rollback,buffs,message:this.message,messageUntil:this.messageUntil,rewardLabel:this.rewardLabel,verdict:this.verdict,seed:this.seed,mode:this.mode,elapsed:this.time};
+    return {phase:this.phase,floor:this.floor,kpi:{...this.kpi},score:score(this.floor,this.kpi),ddl:this.ddl,current:this.current,combo:this.combo,maxCombo:this.maxCombo,perfects:this.perfects,accepted:this.accepted,skipped:this.skipped,maxSkipStreak:this.maxSkipStreak,researchImperfect:this.researchImperfect,counts:{...this.counts},paused:this.paused,finished:this.finished,forced:this.forced,rollback:this.rollback,statuses,buffs,message:this.message,messageUntil:this.messageUntil,rewardLabel:this.rewardLabel,verdict:this.verdict,seed:this.seed,mode:this.mode,elapsed:this.time};
   }
 }
