@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {Renderer} from '../src/view/renderer';
 import {GameEngine} from '../src/game/engine';
 import {catalog} from '../src/game/rules';
+import {CRANE_HEAD} from '../src/game/crane';
 
 test('danmaku paints above sky but behind both placed rooms and the crane',()=>{
   const order:string[]=[];
@@ -21,14 +22,15 @@ test('gold truss rotates from the screen edge and terminates at the existing hoo
     const ctx={getTransform:()=>({a:1.5,d:1.5,e:0,f:192}),save(){},restore(){},setTransform(){},translate:(...p:number[])=>shifts.push(p),rotate:(a:number)=>angles.push(a),beginPath(){},moveTo(){},lineTo(){},stroke(){},drawImage:(...args:any[])=>images.push(args)};
     const r=Object.assign(Object.create(Renderer.prototype),{ctx,craneSheet:{complete:true,naturalWidth:2172}}) as Renderer;
     r.rope(200,-48,120,180);
-    assert.deepEqual(shifts[0],[150,0]);assert.equal(angles[0],Math.atan2(213,-60));
+    const tip=231-CRANE_HEAD.top*.75;
+    assert.deepEqual(shifts[0],[150,0]);assert.equal(angles[0],Math.atan2(tip,-60));
     assert.equal(images.length,2);assert.deepEqual(images[0].slice(1,5),[107,44,1960,245]);assert.deepEqual(images[1].slice(1,5),[1000,396,174,296]);
     Object.assign(r,{viewportTop:128,scale:.75,canvas:{clientWidth:320}});shifts.length=0;angles.length=0;images.length=0;
     r.rope(200,-48,120,180);
-    assert.deepEqual(shifts[0],[160,0]);assert.equal(angles[0],Math.atan2(213,-70));
+    assert.deepEqual(shifts[0],[160,0]);assert.equal(angles[0],Math.atan2(tip,-70));
     const length=images[0][7]*1800/1960;
     assert.ok(Math.abs(160+length*Math.cos(angles[0])-90)<1e-8);
-    assert.ok(Math.abs(length*Math.sin(angles[0])-213)<1e-8);
+    assert.ok(Math.abs(length*Math.sin(angles[0])-tip)<1e-8);
     assert.ok(images[0][5]<0,'the top fixture extends beyond the screen edge');
   }finally{if(previous)Object.defineProperty(globalThis,'devicePixelRatio',previous);else delete (globalThis as any).devicePixelRatio;}
 });

@@ -1,4 +1,5 @@
 import {GameEngine} from '../game/engine';
+import {CRANE_SCALE,CRANE_HEAD} from '../game/crane';
 import {RULES,seeded} from '../game/rules';
 import {assetUrl} from '../features/assets';
 import {pixelFont} from '../features/pixel-font';
@@ -33,14 +34,13 @@ export class Renderer {
     const safeTop=parseFloat(getComputedStyle(this.canvas).getPropertyValue('--safe-area-top'))||0;
     const layout=portraitLayout(w,h,safeTop);
     this.portraitTop=layout.top/this.scale;this.viewportTop=e.phase==='READY'?0:this.portraitTop;
-    this.canvas.parentElement?.style.setProperty('--phone-buffs-top',`${layout.buffs}px`);
     const d=Math.min(devicePixelRatio||1,2);this.canvas.width=Math.round(w*d);this.canvas.height=Math.round(h*d);this.ctx.setTransform(this.scale*d,0,0,this.scale*d,0,0);
-    e.setViewport(this.width,this.height-this.viewportTop);this.skyKey='';
+    e.setViewport(this.width,this.height-this.viewportTop,this.viewportTop);this.skyKey='';
   }
   rect(r:Rect,color:string){this.ctx.fillStyle=color;this.ctx.fillRect(Math.round(r.x),Math.round(r.y),Math.round(r.w),Math.round(r.h));}
   render(e:GameEngine){
     const top=e.phase==='READY'?0:this.portraitTop;
-    if(top!==this.viewportTop){this.viewportTop=top;e.setViewport(this.width,this.height-top);}
+    if(top!==this.viewportTop){this.viewportTop=top;e.setViewport(this.width,this.height-top,top);}
     const c=this.ctx,w=this.width,h=this.height-this.viewportTop;this.drawSky(e);this.drawDanmaku(e);c.save();
     if(this.viewportTop)c.translate(0,this.viewportTop);
     const comboAge=e.time-e.comboCue.at;
@@ -84,13 +84,13 @@ export class Renderer {
       c.restore();
     }
     if(e.phase==='READY'){
-      const pivot=w>h?w*.85:w*.73,ropeEnd=w>h?h*.19:h*.11;
-      const drift=motionEnabled?Math.sin(performance.now()/1600)*14:0;
+      const pivot=w>h?w*.85:w*.73,ropeEnd=(w>h?h*.19:h*.11)*CRANE_SCALE;
+      const drift=motionEnabled?Math.sin(performance.now()/1600)*14*CRANE_SCALE:0;
       this.rope(pivot,-48,pivot+drift,ropeEnd);this.room(0,pivot+drift,ropeEnd+24);
     }else{
       const craneCenter=center+roofSway;
       if(e.phase==='SWINGING'){rope=[craneCenter+e.anchorX,e.hookPivotY,craneCenter+e.hookX,e.hookY];this.rope(...rope);}
-      else if(!e.finished){const hx=center+e.anchorX+Math.sin(e.phaseAngle)*10;rope=[center+e.anchorX,-48,hx,105];this.rope(...rope);}
+      else if(!e.finished){const hx=center+e.anchorX+Math.sin(e.phaseAngle)*10*CRANE_SCALE;rope=[center+e.anchorX,-48,hx,105*CRANE_SCALE-(1-CRANE_SCALE)*this.viewportTop/zoom];this.rope(...rope);}
       if(e.current){const x=craneCenter+e.currentX,y=e.currentY+ground;
         c.save();c.translate(x,y+44);if(e.phase==='GAME_OVER')c.rotate(e.rotation);this.room(e.current.sprite,0,-44);c.restore();
         if(e.phase==='SWINGING'){
@@ -133,17 +133,17 @@ export class Renderer {
     const anchor=this.viewportTop?this.canvas.clientWidth/2:(t.a*px+t.e)/dpr,hx=(t.a*x+t.e)/dpr,hy=(t.d*y+t.f)/dpr;
     const ready=this.craneSheet.complete&&this.craneSheet.naturalWidth>0;
     // The supplied truss replaces the rope and rotates toward the existing hook endpoint.
-    const tipY=hy-24*scale,dx=hx-anchor,length=Math.hypot(dx,tipY);
-    const thickness=Math.max(12,Math.min(28,length*245/1800));
+    const tipY=hy-CRANE_HEAD.top*scale,dx=hx-anchor,length=Math.hypot(dx,tipY);
+    const thickness=Math.max(12*CRANE_SCALE,Math.min(28*CRANE_SCALE,length*245/1800));
     c.save();c.setTransform(dpr,0,0,dpr,0,0);c.imageSmoothingEnabled=false;
     c.translate(anchor,0);c.rotate(Math.atan2(tipY,dx));
     if(ready)c.drawImage(this.craneSheet,107,44,1960,245,-75/1800*length,-122/245*thickness,1960/1800*length,thickness);
     else{c.fillStyle='#ffd43b';c.fillRect(0,-3,length,6);}
     c.restore();
     c.strokeStyle='#233047';c.lineWidth=2;c.beginPath();
-    c.moveTo(x,y+9);c.lineTo(x-31,y+28);c.moveTo(x,y+9);c.lineTo(x+31,y+28);c.stroke();
-    if(ready)c.drawImage(this.craneSheet,1000,396,174,296,Math.round(x-10),Math.round(y-24),20,34);
-    else{c.fillStyle='#ffd43b';c.fillRect(x-8,y-22,16,20);}
+    c.moveTo(x,y+CRANE_HEAD.eye);c.lineTo(x-31,y+28);c.moveTo(x,y+CRANE_HEAD.eye);c.lineTo(x+31,y+28);c.stroke();
+    if(ready)c.drawImage(this.craneSheet,1000,396,174,296,Math.round(x-CRANE_HEAD.width/2),Math.round(y-CRANE_HEAD.top),CRANE_HEAD.width,CRANE_HEAD.height);
+    else{c.fillStyle='#ffd43b';c.fillRect(x-8*CRANE_SCALE,y-22*CRANE_SCALE,16*CRANE_SCALE,20*CRANE_SCALE);}
   }
   pixelText(text:string,x:number,y:number,color:string,size=16){
     const c=this.ctx,t=c.getTransform(),dpr=Math.min(devicePixelRatio||1,2),visibleWidth=this.canvas.width/dpr;

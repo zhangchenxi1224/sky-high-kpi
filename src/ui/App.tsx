@@ -7,6 +7,7 @@ import {ResultScreen} from './ResultScreen';
 import {usePreferences} from '../store';
 import {BirdCompanion} from './BirdCompanion';
 import {earnBirdFood,feedBird,loadBirdDay,saveBirdDay} from '../features/bird';
+import {previewBirdEnding,type BirdEndingLine} from '../features/bird-ending';
 import {assetUrl} from '../features/assets';
 import {GameHud} from './GameHud';
 import {MetricIcon} from './MetricIcon';
@@ -50,11 +51,13 @@ export function App(){
   useEffect(()=>{const media=matchMedia('(prefers-reduced-motion: reduce)'),update=()=>setReducedMotion(media.matches);media.addEventListener('change',update);return()=>media.removeEventListener('change',update);},[]);
   const [birdDay,setBirdDay]=useState(()=>loadBirdDay()),[feeding,setFeeding]=useState(false),[birdFlyaway,setBirdFlyaway]=useState(false),[birdGained,setBirdGained]=useState(0);
   const birdTimers=useRef<number[]>([]);
+  const [birdEnding,setBirdEnding]=useState<BirdEndingLine>(previewBirdEnding),settledRuns=useRef(new WeakSet<GameEngine>());
   useEffect(()=>()=>birdTimers.current.forEach(window.clearTimeout),[]);
   const refresh=()=>setS(engine.current.snapshot());
   const start=()=>{
     if(engine.current.phase==='READY'){setBirdFlyaway(true);birdTimers.current.push(window.setTimeout(()=>setBirdFlyaway(false),900));}
     setBirdGained(0);
+    setBirdEnding(previewBirdEnding);
     void sound.current.unlock();
     engine.current.start();
     refresh();
@@ -90,10 +93,12 @@ export function App(){
   const attach=(e:GameEngine)=>{e.on(event=>{
     if(event.type==='land')sound.current.effect(event.perfect?'perfect':'land',event.combo);
     else sound.current.effect(event.type);
-    if(event.type==='over'&&e.mode==='normal'){
+    if(event.type==='over'&&e.mode==='normal'&&!settledRuns.current.has(e)){
+      settledRuns.current.add(e);
       const final=e.snapshot(),earned=earnBirdFood(loadBirdDay(),final.score);
       saveBirdDay(earned.day);setBirdDay(earned.day);setBirdGained(earned.gained);
-      usePreferences.getState().save({date:new Date().toISOString(),floor:final.floor,score:final.score,gpa:final.kpi.gpa,title:getTitle(final).name});
+      const title=getTitle(final);
+      setBirdEnding(usePreferences.getState().save({date:new Date().toISOString(),floor:final.floor,score:final.score,gpa:final.kpi.gpa,title:title.name,personaId:title.rule}));
     }
     refresh();
   });};
@@ -159,7 +164,7 @@ export function App(){
     </div>
     <div className="score-panel ink-panel" aria-label={`综测总分 ${s.score}`}><MetricIcon kind="gpa"/><strong>{String(s.score).padStart(5,'0')}</strong><span>综测</span></div>
     {s.paused&&!transitioning&&!panel&&!s.finished&&<div className="modal-backdrop"><section className="pixel-modal compact" role="dialog" aria-modal="true" aria-labelledby="pause-title"><span className="modal-eyebrow pixel-label">TAKE A BREATH</span><h2 id="pause-title">课间休息</h2><p>DDL 和吊车已暂停，喝口水再继续。</p><div className="result-buttons"><button className="pixel-button blue" autoFocus onClick={()=>{engine.current.paused=false;void sound.current.unlock();refresh();}}>继续卷楼</button><button className="pixel-button gold" onClick={restart}>重新开局</button></div></section></div>}
-    {s.finished&&!panel&&<ResultScreen snapshot={s} tower={engine.current.tower} birdGained={birdGained} onRestart={restart} onHome={returnHome} onRecords={()=>openPanel('records')} randomUrl={randomPlayUrl.href}/>}
+    {s.finished&&!panel&&<ResultScreen snapshot={s} tower={engine.current.tower} birdGained={birdGained} birdEnding={birdEnding} onRestart={restart} onHome={returnHome} onRecords={()=>openPanel('records')} randomUrl={randomPlayUrl.href}/>}
     {panel&&<div className="modal-backdrop"><section className="pixel-modal campus-modal" role="dialog" aria-modal="true" aria-labelledby="campus-title"><button className="close" aria-label="关闭窗口" onClick={closePanel}>×</button><span className="modal-eyebrow pixel-label">CAMPUS NOTICEBOARD</span><h2 id="campus-title">{panel==='rules'?'新生入学指南':panel==='records'?'本机成绩榜':'校园公告栏'}</h2><div className="tabs pixel-tabs"><button className={panel==='campus'?'selected':''} onClick={()=>setPanel('campus')}>本局账本</button><button className={panel==='rules'?'selected':''} onClick={()=>setPanel('rules')}>玩法指南</button><button className={panel==='records'?'selected':''} onClick={()=>setPanel('records')}>成绩榜</button></div>
       {panel==='campus'&&<><StatGrid s={s}/><div className="campus-options"><span>校园景色</span><button className="pixel-button blue" onClick={()=>prefs.toggle('night')}>{prefs.night?'星空校区':'日落校区'}</button></div><div className="campus-options"><label htmlFor="sway-style">楼体摇晃</label><select id="sway-style" value={prefs.detailedSway?'detailed':'classic'} onChange={()=>prefs.toggle('detailedSway')}><option value="detailed">细腻</option><option value="classic">经典</option></select></div><div className="campus-options"><span>小鸟气泡</span><button className="pixel-button gold" aria-pressed={prefs.birdBubble} onClick={()=>prefs.toggle('birdBubble')}>{prefs.birdBubble?'已开启':'已关闭'}</button></div><p className="small-print">每一块小楼，都算大学的一次努力。成绩仅保存在当前浏览器。</p><button className="pixel-button blue wide" onClick={closePanel}>{preview?'回到校园':'继续卷楼'}</button></>}
       {panel==='rules'&&<><p>对准楼顶，点击画面或按 <kbd>SPACE</kbd> 松钩。每投只有 <b>{RULES.ddl} 秒</b>，落空一次即结束。</p><div className="rule-summary pixel-tags"><span>完美 ≤ 6%</span><span>落稳 ≤ 50%</span><span>超出即落空</span></div><p className="small-print">百分比为砖块中心相对下层中心的偏移 / 砖宽；志愿砖完美窗口为 12%。</p><div className="block-guide">{instructions.map(([name,desc,sprite])=><div key={name}><div className={`mini-room ${sprite===12?'fitness':''}`} style={sprite===12?{backgroundImage:`url("${assetUrl('fitness.webp')}")`}:{backgroundPosition:`${sprite%4*100/3}% ${Math.floor(sprite/4)*50}%`}}/><div><b>{name}</b><span>{desc}</span></div></div>)}</div><p className="small-print">PERFECT 每级连击增加 10% 正向收益，最高 ×2；课业额外 +1 连击。诱惑扣分不翻倍。竞赛记原始积分，每点折算 15 分。</p><p className="small-print">综测 = 层数×10 + GPA×100 + 科研×30 + 竞赛×15 + 志愿×5 + 实践×20。按 Esc 暂停，S 跳过诱惑。</p><button className="pixel-button blue wide" onClick={closePanel}>懂了，去卷楼</button></>}

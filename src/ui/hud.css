@@ -29,7 +29,7 @@
   .status-chip{gap:2px;min-height:18px;padding:0 2px;line-height:14px}
   .status-chip>span{min-width:10px;font-size:10px}
   .status-chip b{font-size:10px;line-height:14px}
-  .status-stack{position:fixed;top:var(--phone-buffs-top,36dvh);left:max(var(--phone-edge),env(safe-area-inset-left));margin:0}
+  .status-stack{position:static;margin:6px 0 0;max-width:100%}
   .hud-test-note{font-size:8px}
   .game-shell .top-controls{right:max(var(--phone-edge),env(safe-area-inset-right));top:max(6px,env(safe-area-inset-top))}
   .game-shell .top-controls .pixel-button{min-width:60px;padding:2px 4px}

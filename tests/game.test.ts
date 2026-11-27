@@ -130,7 +130,7 @@ test('camera holds for two floors, zooms out through floor six, then frames five
   }
 });
 test('contact boundaries: exact 6%, 12%, 50%, and first outside pixel',()=>{assert.equal(judge(5.28,'study'),'PERFECT');assert.equal(judge(5.2801,'study'),'SUCCESS');assert.equal(judge(10.56,'volunteer'),'PERFECT');assert.equal(judge(10.5601,'volunteer'),'SUCCESS');assert.equal(judge(-44,'study'),'SUCCESS');assert.equal(judge(44.001,'study'),'MISS');});
-test('rotating swaps only the framing: 2.5 bricks of clearance in landscape, original spacing in portrait',()=>{
+test('the shorter crane preserves at least 2.5 bricks of landscape clearance and portrait spacing',()=>{
   const e=new GameEngine(7,'fixed');e.start();
   for(let floor=0;floor<=40;floor++){
     for(const [width,height] of [[430,760],[1280,720],[430,950],[1520,720]]){
@@ -139,7 +139,6 @@ test('rotating swaps only the framing: 2.5 bricks of clearance in landscape, ori
       const gap=(e.topY-e.currentY-RULES.height)/RULES.height;
       assert.ok(gap>=(landscape?2.5:1.6)-1e-8);
       if(floor>=6&&landscape){
-        approx(gap,2.5);
         assert.ok((height/e.viewZoom-e.topY-e.groundScreen-e.cameraY)/RULES.height>=5);
       }
       e.phaseAngle=Math.PI/2;e.angleMultiplier=1.15;e.updateHook();

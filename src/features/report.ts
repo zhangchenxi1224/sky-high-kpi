@@ -1,5 +1,6 @@
 import type {Snapshot,Placed} from '../game/engine';
 import {getSocialProfile,getTitle} from '../game/rules';
+import {birdMoodColors,previewBirdEnding,type BirdEndingLine} from './bird-ending';
 
 export const REPORT_SIZE={width:1080,height:1080};
 const xml=(value:string|number)=>String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[ch]!));
@@ -14,7 +15,7 @@ export function wrapReportComment(value:string){
 }
 
 // One artwork supplies both the result screen and the downloaded PNG.
-export function createReportSvg(s:Snapshot,tower:Placed[],qr:string,bird:string,birdGained=0){
+export function createReportSvg(s:Snapshot,tower:Placed[],qr:string,bird:string,birdGained=0,ending:BirdEndingLine=previewBirdEnding,birdTextImage?:string){
   const title=getTitle(s),social=getSocialProfile(s.kpi).profile;
   const ink='#172938',cream='#fffaf0';
   const text=(value:string|number,x:number,y:number,size:number,extra='')=>`<text x="${x}" y="${y}" font-size="${size}" ${extra}>${xml(value)}</text>`;
@@ -83,8 +84,12 @@ export function createReportSvg(s:Snapshot,tower:Placed[],qr:string,bird:string,
     ${text('你的天际线，值得收藏。',232,949,35)}
     ${text('扫码回到校园，再叠一座楼',232,984,25,'fill="#52667a"')}
     ${text(birdGained>0?`已为小鸟存下 ${birdGained} 粒口粮`:'下一次，一起飞得更高',232,1017,23,'fill="#52667a"')}
-    <image href="${xml(bird)}" x="708" y="901" width="135" height="141"/>
-    <path d="M863 915 L1012 905 L1025 982 L875 1007 L869 980 L841 970 L861 954Z" fill="#fffdf1" stroke="${ink}" stroke-width="3"/>
-    <g transform="rotate(-5 937 952)">${center('爱你老己',936,946,29)}${center('下把再来',939,982,29)}</g>
+    <image href="${xml(bird)}" x="708" y="929" width="108" height="113"/>
+    <g stroke-linejoin="miter" data-bird-mood="${ending.mood}">
+      <title>${xml(ending.text)}</title>
+      <path d="M756 904 H1022 V908 H1026 V948 H1022 V952 H792 V956 H788 V960 H784 V964 H780 V952 H756 V948 H752 V908 H756Z" fill="#10172C" transform="translate(2 2)"/>
+      <path d="M756 902 H1022 V906 H1026 V946 H1022 V950 H792 V954 H788 V958 H784 V962 H780 V950 H756 V946 H752 V906 H756Z" fill="#172038" stroke="${birdMoodColors[ending.mood]}" stroke-width="2"/>
+      ${birdTextImage?`<image href="${xml(birdTextImage)}" x="759" y="906" width="260" height="40" style="image-rendering:pixelated"/>`:center(ending.text,889,934,24,'font-family="CampusPixel,monospace" font-weight="400" fill="#FFF9DB"')}
+    </g>
   </g></svg>`;
 }

@@ -1,5 +1,6 @@
 import {RULES, TEMPTATION_RULES, temptationRelief, catalog, difficulty, drawBlock, emptyKpi, FIXED_SEQUENCE, judge, reward, score, seeded, type Block, type Kind, type KPI} from './rules';
 import {hookPosition} from './hook';
+import {CRANE_SCALE} from './crane';
 import {TowerMotion} from './tower-motion';
 import memes from '../config/memePack.json';
 import {emptyComboCue,type ComboCue} from '../features/combo';
@@ -13,7 +14,8 @@ export type Snapshot={phase:Phase;floor:number;kpi:KPI;score:number;ddl:number;c
 export class GameEngine {
   phase:Phase='READY';floor=0;kpi=emptyKpi();combo=0;maxCombo=0;perfects=0;accepted=0;skipped=0;skipStreak=0;maxSkipStreak=0;researchImperfect=0;lateLandings=0;narrowLandings=0;ddlForcedMiss=false;private dropDdl=RULES.ddl;counts:Partial<Record<Kind,number>>={};
   tower:Placed[]=[];current:Block|null=null;currentX=0;currentY=0;velocity=0;rotation=0;phaseAngle=-.65;hookAngle=0;hookX=0;hookY=0;anchorX=0;
-  cameraY=0;cameraX=0;cameraFromY=0;cameraFromX=0;cameraTime=0;groundScreen=620;hangingScreen=170;viewHeight=720;ropeLength=190;
+  cameraY=0;cameraX=0;cameraFromY=0;cameraFromX=0;cameraTime=0;groundScreen=620;hangingScreen=170;viewHeight=720;ropeLength=190*CRANE_SCALE;
+  private viewportTop=0;
   private landscape=false;
   comboCue=emptyComboCue();feverAt=-10;
   time=0;phaseTime=0;ddl=RULES.ddl;paused=false;finished=false;forced=false;warningPlayed=false;rollback=0;
@@ -28,9 +30,10 @@ export class GameEngine {
   emit(event:GameEvent){this.listeners.forEach(fn=>fn(event));}
   say(text:string){this.message=text;this.messageUntil=this.time+3.2;this.emit({type:'message',text});}
   choose(pool:string[]){return pool[Math.floor(this.random()*pool.length)];}
-  setViewport(width:number,height:number){
+  setViewport(width:number,height:number,top=0){
     this.landscape=width>height;
-    this.viewHeight=height;this.groundScreen=height-100;this.hangingScreen=Math.max(126,height*.23);this.ropeLength=this.hangingScreen+24;
+    this.viewportTop=top;
+    this.viewHeight=height;this.groundScreen=height-100;this.hangingScreen=Math.max(126,height*.23);this.ropeLength=(this.hangingScreen+24)*CRANE_SCALE;
     this.cameraY=this.cameraTarget(this.floor);
     if(this.phase==='CAMERA_SHIFT'){
       this.cameraFromY=this.cameraTarget(this.floor-1);
@@ -57,8 +60,9 @@ export class GameEngine {
   get hookPivotY(){
     const roof=this.topY+this.groundScreen+this.cameraY;
     // The rope reaches its lowest point when vertical; lift the entire rig if needed.
-    const lowestPivot=roof-this.hangingGap-RULES.height-hookToBrick-this.ropeLength;
-    return Math.min(-48,lowestPivot);
+    const lowestPivot=roof-this.hangingGap-RULES.height-hookToBrick-this.ropeLength/CRANE_SCALE;
+    // Scale around the actual screen top, including the portrait HUD's reserved inset.
+    return Math.min(-48,lowestPivot)*CRANE_SCALE-(1-CRANE_SCALE)*this.viewportTop/this.viewZoom;
   }
   get coffeeRemaining(){return Math.max(0,this.coffeeUntil-this.time);}
   get params(){const d=difficulty(this.floor+1,this.rollback),fitness=this.fitnessActive?1+RULES.fitnessBoost:1;return {...d,omega:d.omega*this.speedMultiplier*(this.coffeeRemaining>0?.55:1)*fitness,angle:d.angle*this.angleMultiplier*fitness};}
