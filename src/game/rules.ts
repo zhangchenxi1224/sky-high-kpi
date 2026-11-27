@@ -1,5 +1,6 @@
 import memes from '../config/memePack.json';
-export const RULES = {version:'2026.11.6', width:88, height:88, gravity:1400, ddl:6, perfect:.06, volunteerPerfect:.12, omegaMin:1.43,omegaMax:3.905,highPressureOmega:3.135,towerSway:true,fitnessChance:.04,fitnessKpi:30,fitnessBoost:.15};
+export const RULES = {version:'2026.11.7', width:88, height:88, gravity:1400, ddl:6, perfect:.06, volunteerPerfect:.12, omegaMin:1.43,omegaMax:3.905,highPressureOmega:3.135,towerSway:true,fitnessChance:.04,fitnessKpi:30,fitnessBoost:.15};
+export const OPENING_DRAW_RULES={lastFloor:8,maxStudyStreak:2};
 export const TEMPTATION_RULES={cooldown:3,minGpa:.30,highPressureMultiplier:1.5,minDifficultyProgress:.65,reliefDecay:1};
 export const temptationRelief=(floor:number)=>floor<=20?6:floor<=40?4:2;
 export type Kind = 'study'|'research'|'competition'|'volunteer'|'practice'|'coffee'|'notes'|'temptation'|'fitness';
@@ -24,7 +25,7 @@ const drawSchedule=[
   {floor:20, percent:[40,13,12,12,11,5,4,3],temptation:.02},
   {floor:35, percent:[34,11,12,15,14,5,4,5],temptation:.03},
 ];
-export function weights(n:number,boostTemptation=false,context:{recentTemptation?:boolean;gpa?:number}={}){
+export function weights(n:number,boostTemptation=false,context:{recentTemptation?:boolean;gpa?:number;history?:readonly Kind[]}={}){
   const floor=clamp(n,drawSchedule[0].floor,drawSchedule.at(-1)!.floor);
   const index=drawSchedule.findIndex(row=>row.floor>=floor);
   const end=drawSchedule[index], start=drawSchedule[Math.max(0,index-1)];
@@ -36,9 +37,14 @@ export function weights(n:number,boostTemptation=false,context:{recentTemptation
   const natural=start.temptation+(end.temptation-start.temptation)*blend;
   const blocked=context.recentTemptation||(context.gpa??4)<TEMPTATION_RULES.minGpa;
   const selected=blocked?0:natural*(boostTemptation?TEMPTATION_RULES.highPressureMultiplier:1);
+  const recent=context.history?.slice(-OPENING_DRAW_RULES.maxStudyStreak)??[];
+  const restStudy=n<=OPENING_DRAW_RULES.lastFloor&&recent.length===OPENING_DRAW_RULES.maxStudyStreak&&recent.every(kind=>kind==='study');
+  const positive=base.map((p,i)=>i===temptation||(restStudy&&i===0)?0:p);
+  const positiveTotal=positive.reduce((a,b)=>a+b,0);
   // Keep fitness at 4%; redistribute protected temptation odds among positive categories.
+  // The opening cooldown only redistributes study odds among the other positive kinds.
   const fitness=n>=4?RULES.fitnessChance:0;
-  return [...base.map((p,i)=>i===temptation?selected:p*(1-selected-fitness)/(1-original)),fitness];
+  return [...positive.map((p,i)=>i===temptation?selected:p*(1-selected-fitness)/(restStudy?positiveTotal:1-original)),fitness];
 }
 export const seeded=(seed:number)=>()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};
 export const catalog:Block[]=[
@@ -60,10 +66,10 @@ export const catalog:Block[]=[
   {id:'fitness',kind:'fitness',name:'体测训练室',sprite:12,value:0},
   ...memes.temptationSkins.map(s=>({id:s.id,kind:'temptation' as Kind,name:s.name,sprite:s.sprite,value:-.15}))
 ];
-export function drawBlock(n:number,random:()=>number,highPressure:boolean,recentTemptation:boolean,gpa=4):Block {
+export function drawBlock(n:number,random:()=>number,highPressure:boolean,recentTemptation:boolean,gpa=4,history:readonly Kind[]=[]):Block {
   const pick=(list:Block[])=>({...list[Math.min(list.length-1,Math.floor(random()*list.length))]});
   let roll=random();
-  const odds=weights(n,highPressure,{recentTemptation,gpa});
+  const odds=weights(n,highPressure,{recentTemptation,gpa,history});
   let index=0;
   while(index<odds.length-1&&roll>=odds[index]){
     roll-=odds[index++];

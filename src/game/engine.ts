@@ -74,7 +74,7 @@ export class GameEngine {
     this.angleMultiplier=this.angleNext*(this.notesLeft>0?.7:1);this.angleNext=1;if(this.notesLeft>0)this.notesLeft--;
     const high=this.params.omega>=RULES.highPressureOmega;
     const id=FIXED_SEQUENCE[this.drawIndex%FIXED_SEQUENCE.length];
-    this.current=this.mode==='fixed'?{...catalog.find(b=>b.id===id)!}:drawBlock(this.floor+1,this.random,high,this.drawHistory.slice(-TEMPTATION_RULES.cooldown).includes('temptation'),this.kpi.gpa);
+    this.current=this.mode==='fixed'?{...catalog.find(b=>b.id===id)!}:drawBlock(this.floor+1,this.random,high,this.drawHistory.slice(-TEMPTATION_RULES.cooldown).includes('temptation'),this.kpi.gpa,this.drawHistory);
     this.drawIndex++;this.drawHistory.push(this.current.kind);if(this.drawHistory.length>4)this.drawHistory.shift();
     this.phase='SWINGING';this.phaseTime=0;this.ddl=RULES.ddl;this.dropDdl=RULES.ddl;this.forced=false;this.warningPlayed=false;this.velocity=0;this.rotation=0;this.anchorX=this.topX;
     this.phaseAngle=(this.drawIndex%2?-.65:.65);this.updateHook();this.emit({type:'spawn'});
