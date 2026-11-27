@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {placeBirdBubble,randomBirdPerch} from '../src/ui/birdPlacement';
+import {placeBirdBubble,randomBirdPerch,randomBubbleDelay} from '../src/ui/birdPlacement';
 
 const bubble={width:232,height:120};
 
@@ -35,4 +35,10 @@ test('seven perches are random, non-repeating and derive their direction',()=>{
   assert.deepEqual(randomBirdPerch(3,7,()=>.999),{perch:6,heading:'right'});
   assert.deepEqual(randomBirdPerch(6,7,()=>0),{perch:0,heading:'left'});
   for(let i=0;i<100;i++)assert.notEqual(randomBirdPerch(4,7,()=>i/100).perch,4);
+});
+
+test('bubble delay is independent of flight and stays inside its window',()=>{
+  assert.equal(randomBubbleDelay(()=>0),45000);
+  assert.equal(randomBubbleDelay(()=>1),75000);
+  assert.equal(randomBubbleDelay(()=>.5),60000);
 });

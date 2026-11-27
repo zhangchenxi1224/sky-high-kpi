@@ -1,7 +1,7 @@
 import {useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
 import {DAILY_BIRD_FOOD,type BirdDay} from '../features/bird';
-import {placeBirdBubble,randomBirdPerch,type BirdBubblePlacement,type BirdHeading} from './birdPlacement';
+import {placeBirdBubble,randomBirdPerch,randomBubbleDelay,type BirdBubblePlacement,type BirdHeading} from './birdPlacement';
 
 const passingThoughts=[
   '今天也替你收好一阵风，等你回来再一起叠高。',
@@ -12,7 +12,7 @@ const passingThoughts=[
 ];
 
 type Props={day:BirdDay;feeding:boolean;bubbleEnabled:boolean;onFeed:()=>void};
-const birdAssets={idle:'assets/bird-idle.webp',upstroke:'assets/bird-upstroke.webp',fly:'assets/bird-fly.webp',happy:'assets/bird-happy.webp'};
+const birdAssets={idle:'assets/bird-idle.webp',upstroke:'assets/bird-upstroke.webp',fly:'assets/bird-fly.webp',happy:'assets/bird-happy-full.webp'};
 
 export function BirdCompanion({day,feeding,bubbleEnabled,onFeed}:Props){
   const [thought,setThought]=useState(0);
@@ -33,17 +33,15 @@ export function BirdCompanion({day,feeding,bubbleEnabled,onFeed}:Props){
         :passingThoughts;
   const line=messages[thought%messages.length];
 
-  const flyToNext=useCallback((showBubble=true)=>{
+  const flyToNext=useCallback(()=>{
     if(feeding||flying)return;
     const next=randomBirdPerch(perch);
-    setBubbleOpen(false);
     setFlying(true);
     setHeading(next.heading);
     setPerch(next.perch);
     setThought(value=>value+1);
     landingTimer.current=window.setTimeout(()=>{
       setFlying(false);
-      setBubbleOpen(showBubble);
     },1050);
   },[feeding,flying,perch]);
 
@@ -51,13 +49,18 @@ export function BirdCompanion({day,feeding,bubbleEnabled,onFeed}:Props){
   useEffect(()=>{setThought(0);},[feeding,day.food===0,day.fed===0]);
   useEffect(()=>{setBubbleOpen(bubbleEnabled);},[bubbleEnabled]);
   useEffect(()=>{
-    if(!bubbleOpen||flying||feeding)return;
+    if(!bubbleOpen||feeding)return;
     const timer=window.setTimeout(()=>setBubbleOpen(false),6000);
     return()=>window.clearTimeout(timer);
-  },[bubbleOpen,flying,feeding]);
+  },[bubbleOpen,feeding]);
+  useEffect(()=>{
+    if(!bubbleEnabled||bubbleOpen||feeding)return;
+    const timer=window.setTimeout(()=>setBubbleOpen(true),randomBubbleDelay());
+    return()=>window.clearTimeout(timer);
+  },[bubbleEnabled,bubbleOpen,feeding]);
   useEffect(()=>{
     if(feeding||flying)return;
-    const timer=window.setTimeout(()=>flyToNext(false),26000);
+    const timer=window.setTimeout(flyToNext,26000);
     return()=>window.clearTimeout(timer);
   },[feeding,flying,flyToNext,perch]);
   useLayoutEffect(()=>{
@@ -76,7 +79,7 @@ export function BirdCompanion({day,feeding,bubbleEnabled,onFeed}:Props){
   const handleBirdClick=()=>{
     if(feeding||flying)return;
     if(!bubbleEnabled){onFeed();return;}
-    flyToNext(true);
+    flyToNext();
   };
 
   return <><aside className="bird-companion" aria-label="校园小鸟伙伴">

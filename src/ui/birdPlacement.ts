@@ -43,4 +43,8 @@ export function randomBirdPerch(current:number,count=7,random=Math.random):{perc
   return {perch,heading:perch>safe?'right':'left'};
 }
 
+export function randomBubbleDelay(random=Math.random,min=45000,max=75000){
+  return Math.round(min+(max-min)*Math.max(0,Math.min(1,random())));
+}
+
 type PlacementScore=BirdBubblePlacement&{score:number};
