@@ -1,11 +1,12 @@
 {
-  "version": "2026.11.4-chenze",
+  "version": "2026.11.28-balance-b",
   "temptationSkins": [
     {"id":"tempt_hongguo","name":"先看两集红果","sprite":7,"primaryColor":"#d95e54","acceptDanmaku":"贵是贵了点，但看了不烧心！","skipDanmaku":"退！别给我看霸总重生！"},
     {"id":"tempt_kangshen","name":"康神开播了","sprite":8,"primaryColor":"#ec8baa","acceptDanmaku":"瓦场悟道，绩点算什么？","skipDanmaku":"忍住！等保研了再看回放！"},
     {"id":"tempt_delta","name":"三角洲跑刀","sprite":9,"primaryColor":"#454b63","acceptDanmaku":"得吃の小曲响起！千万撤离！","skipDanmaku":"别叫了，室友自己去航天基地吧"},
     {"id":"tempt_hok","name":"赢一把王者就睡","sprite":10,"primaryColor":"#4387c9","acceptDanmaku":"连跪三把，但精神状态很稳定","skipDanmaku":"已老实，卸载保平安"},
-    {"id":"tempt_selflove","name":"爱你老己","sprite":11,"primaryColor":"#edb55c","acceptDanmaku":"爱你老己，明天见！","skipDanmaku":"老己对不起，今天还得卷！"}
+    {"id":"tempt_selflove","name":"爱你老己","sprite":11,"primaryColor":"#edb55c","acceptDanmaku":"爱你老己，明天见！","skipDanmaku":"老己对不起，今天还得卷！"},
+    {"id":"tempt_snack","name":"夜宵补给","sprite":13,"primaryColor":"#92e8af","acceptDanmaku":"吃饱再卷，多给一秒！","skipDanmaku":"先把这层盖好再吃！"}
   ],
   "danmakuBank": {
     "perfectStreak3":["夯爆了！","助我破鼎！","此人的手速恐怕在我之上","老师海底捞稳了","神之六秒","胆子真是肥嘟嘟的","这波不烧心","低山臭水遇知音"],
@@ -16,18 +17,37 @@
   },
   "titles": [
     {"rule":"chenze1103","name":"1103号编外老铁","comment":"成功之路步履蹒跚，举旗呐喊1103；分数卡在1103，编外老铁也能站上峡谷之巅。泽哥看了都得说一句：行了老铁，进来坐。","stamp":"峡谷之巅"},
-    {"rule":"temptation","name":"赛博奶头乐首席鉴赏官","comment":"三次接住红果、直播和跑刀，GPA 被啃掉 0.45，快乐倒是很稳定。","stamp":"再看一集"},
+    {"rule":"zeroGpa","name":"零绩点精神自由人","comment":"叠了十层楼，绩点硬是干到了 0.00；学分可以不要，快乐绝不打折，精神状态遥遥领先。","stamp":"爱你老己"},
+    {"rule":"secretGrinder","name":"嘴上摆烂背地满绩","comment":"朋友圈天天发“今天不卷了”，背地里一边刷红果一边冲上 22 层。嘴上摆烂，手比谁都稳。","stamp":"装弱卷王"},
+    {"rule":"temptation","name":"赛博奶头乐首席鉴赏官","comment":"三次接下有代价的诱惑，绩点和吊车都感受到了你的选择；快乐很稳定，落点可得看准。","stamp":"再看一集"},
     {"rule":"resist","name":"无情预制卷王","comment":"康神开播先验牌，跑刀喊你先拒绝；三次忍住诱惑，20 层后还在硬扛。","stamp":"我要验牌"},
-    {"rule":"volunteer","name":"综测航天基地跑刀鼠鼠","comment":"志愿与实践折算占优，带着时长和红章安全撤离，主打高性价比综测。","stamp":"千万撤离"},
-    {"rule":"research","name":"纯手搓老艺术家","comment":"科研砖最多却频繁没落正；不是不会写，是被查重判了 92% AIGC。","stamp":"大修退回"},
-    {"rule":"champion","name":"瓦场悟道 · 破鼎战神","comment":"30 层以上、GPA 3.80 以上；绩点基础，瓦场悟道就不基础。","stamp":"夯爆了"},
     {"rule":"comeback","name":"校园萧炎","comment":"绩点暂时没起飞，竞赛和实践已经开始冒火；三十年河东，三十年河西，莫欺少年穷。","stamp":"莫欺少年穷"},
+    {"rule":"champion","name":"瓦场悟道 · 破鼎战神","comment":"30 层以上、GPA 3.80 以上；绩点基础，瓦场悟道就不基础。","stamp":"夯爆了"},
+    {"rule":"precision","name":"人形游标卡尺","comment":"误差比教务处给分标准还苛刻，这手速不去打瓦真是电竞圈的重大损失。","stamp":"像素对齐"},
     {"rule":"allRounder","name":"六边形校园战神","comment":"绩点、科研、竞赛、志愿、实践五项全开，老师看了沉默，同学看了转发。","stamp":"样样都行"},
+    {"rule":"deadline","name":"凌晨两点死线战神","comment":"每次都卡着最后两秒交卷，不是拖延症，是没到 DDL 根本没有创作灵感。","stamp":"压线提交"},
     {"rule":"projectStar","name":"项目组永动机","comment":"PPT 能改到凌晨，赞助能谈到宿舍，群聊永远第一个回“收到”。","stamp":"群聊置顶"},
+    {"rule":"volunteer","name":"综测航天基地跑刀鼠鼠","comment":"志愿与实践折算占优，带着时长和红章安全撤离，主打高性价比综测。","stamp":"千万撤离"},
+    {"rule":"campusHelper","name":"感动校园大善人","comment":"校运会迎新马拉松场场不落，红马甲都穿出包浆；志愿拉满但绩点感人，建议直接留校。","stamp":"建议留校"},
+    {"rule":"research","name":"纯手搓老艺术家","comment":"科研砖最多却频繁没落正；不是不会写，是被查重判了 92% AIGC。","stamp":"大修退回"},
+    {"rule":"itemMaster","name":"冰美式邪修大师","comment":"别人靠手速硬刚，你靠冰美式和邪修秘籍强行降速控场；路子虽野，但管用就行。","stamp":"邪修过关"},
+    {"rule":"examPurist","name":"纯血做题家","comment":"满脑子都是高数与线代，综测全靠绩点硬抬；成绩单很漂亮，就是找不到人写推荐信。","stamp":"唯分是图"},
     {"rule":"libraryHermit","name":"图书馆驻场研究生","comment":"GPA 和科研撑起全部社交电量，组会发言主要靠打字。","stamp":"已读不回"},
+    {"rule":"narrowMiracle","name":"60分万岁建筑奇迹","comment":"几乎没打过连击，却靠一路擦边稳住十几层；歪得像期末复习重点，但就是没塌。如何呢，又能怎？","stamp":"海底捞王"},
     {"rule":"early","name":"早八即休学大师","comment":"不到 5 层就结束，床还没起，楼先塌了。","stamp":"已老实"},
-    {"rule":"default","name":"校园天际线建筑师","comment":"没触发极端标签，但把普通的一天稳稳叠成了自己的天际线。","stamp":"未来可期"}
+    {"rule":"default","name":"校园稀有活人","comment":"没卷到掉发，也没彻底摆烂；在一众极端人设里，你居然保留了珍贵的活人感。","stamp":"情绪稳定"}
   ],
+  "birdEndingLines": {
+    "all_unlocked": ["{t}/{t}全收集啦！", "全人格集齐，太强啦！", "满图鉴！全勤奖给你"],
+    "double_win": ["新高！图鉴{u}/{t}", "双喜！解锁{u}/{t}", "破纪录+新图鉴！"],
+    "first_unlock": ["解锁1/{t}人格！", "首份档案1/{t}！", "图鉴开启！1/{t}"],
+    "new_persona": ["解锁{u}/{t}人格", "新图鉴！{u}/{t}", "档案+1！{u}/{t}"],
+    "new_best": ["刷新历史最高分啦！", "破纪录！今天太稳了", "新高！偷偷喝冰美式？"],
+    "new_best_floor": ["新纪录！冲上{f}层", "楼层新高！飞得更高", "破纪录！今天太稳了"],
+    "close_call": ["只差一点就破纪录！", "手感热了，再来一把！", "差点新高，趁热重开！", "就差临门一脚啦！"],
+    "rough_run": ["手感不好，下回再来！", "这把不算，抖毛重开！", "早八手滑，下把起飞！", "就当热身，下回稳赢！", "别内耗，喂我换手气！"],
+    "normal": ["稳稳一局，口粮到手！", "图鉴{u}/{t}，加油", "换条偏科路线试试？", "不急不急，慢慢盖楼~"]
+  },
   "socialProfiles": [
     {"id":"extrovert","name":"e人","detail":"社交满电","comment":"哪里有人，哪里就有你的小组作业。"},
     {"id":"introvert","name":"i人","detail":"低社交电量","comment":"不是不合群，是社交电量只够撑到下课。"},

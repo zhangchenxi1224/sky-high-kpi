@@ -1,0 +1,79 @@
+/* Arcade entry: the existing campus remains the entire background. */
+.is-home .hud-top,.is-home .ddl-meter,.is-home .score-panel{display:none}
+.welcome.arcade-home{inset:0;top:0;left:0;width:100%;height:100%;translate:none;animation:none}
+.arcade-home .welcome-copy{top:16%;bottom:auto;left:50%;right:auto;width:min(58vw,850px,104vh);transform:translateX(-50%);padding:0}
+.arcade-home h1{margin:0;line-height:1;font-size:0;letter-spacing:0;filter:none;transform:none;text-shadow:none}
+.game-logo{display:block;width:100%;height:auto;image-rendering:pixelated}
+.home-start{position:absolute;top:60%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:16px;white-space:nowrap}
+.arcade-button{--edge:#142039;position:relative;display:flex;align-items:center;justify-content:center;gap:20px;min-width:310px;min-height:76px;padding:10px 36px 16px;background:linear-gradient(#ffe889 0 10%,#ffd648 10% 83%,#e1a61c 83%);color:var(--edge);border:4px solid var(--edge);box-shadow:inset 4px 4px #fff4b4,inset -4px -4px #be8212,0 6px var(--edge);clip-path:polygon(0 14px,6px 14px,6px 6px,16px 6px,16px 0,calc(100% - 16px) 0,calc(100% - 16px) 6px,calc(100% - 6px) 6px,calc(100% - 6px) 14px,100% 14px,100% calc(100% - 14px),calc(100% - 6px) calc(100% - 14px),calc(100% - 6px) calc(100% - 6px),calc(100% - 16px) calc(100% - 6px),calc(100% - 16px) 100%,16px 100%,16px calc(100% - 6px),6px calc(100% - 6px),6px calc(100% - 14px),0 calc(100% - 14px));font:400 clamp(25px,3vw,38px)/1.2 CampusPixel,monospace;letter-spacing:2px;animation:arcade-breathe 1.8s steps(2,end) infinite;pointer-events:auto}
+.arcade-button:hover{filter:brightness(1.07)}
+.arcade-button:active{translate:0 3px}
+.arcade-button:disabled{animation:none}
+.arcade-button span{font-size:.87em;line-height:1}
+.arcade-home .best-note{margin:0;color:#142039;font:400 clamp(14px,1.8vw,21px)/1.3 CampusPixel,monospace;letter-spacing:1px}
+.arcade-home .welcome-links{position:static;display:flex;justify-content:center}
+.game-shell .arcade-home .bird-companion{top:72%;left:50%;width:360px;height:116px}
+.game-shell .arcade-home .bird-perch{width:360px;height:116px}
+.game-shell .arcade-home .bird-stage{width:104px;height:104px;left:128px}
+.game-shell .arcade-home .bird-stage.perch-0{translate:-120px 0}
+.game-shell .arcade-home .bird-stage.perch-1{translate:-80px -5px}
+.game-shell .arcade-home .bird-stage.perch-2{translate:-40px 0}
+.game-shell .arcade-home .bird-stage.perch-3{translate:0 -8px}
+.game-shell .arcade-home .bird-stage.perch-4{translate:40px 0}
+.game-shell .arcade-home .bird-stage.perch-5{translate:80px -5px}
+.game-shell .arcade-home .bird-stage.perch-6{translate:120px 0}
+@keyframes arcade-breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+
+/* Comic results: screen and PNG share the exact same live-data artwork. */
+.report-backdrop{position:fixed;inset:0;z-index:20;padding:12px;display:flex;align-items:center;justify-content:center;overflow-y:auto;background:#43658d45}
+.report-dialog{position:relative;width:min(650px,96vw,calc(100dvh - 160px));flex:none}
+.report-artwork{position:relative;width:100%}
+.report-image{display:block;width:100%;height:auto;user-select:auto;touch-action:pan-y;filter:drop-shadow(3px 5px 0 #14243b44)}
+.report-close{position:absolute;z-index:2;right:1.7%;top:1.5%;width:clamp(32px,4vw,44px);height:clamp(32px,4vw,44px);border:3px solid #172938;border-radius:3px;transform:rotate(5deg);background:#f99175;box-shadow:inset 2px 2px #ffceb0,2px 3px #172938;color:#172938;font:900 35px/.8 Arial,sans-serif;padding:0}
+.report-save-hint{text-align:center;color:#fff8e7;font-size:12px;line-height:1.5;text-shadow:1px 1px #29425d;margin:-1px 0 4px}
+.report-actions{display:flex;gap:22px;padding:0 18px}
+.comic-button{position:relative;display:flex;justify-content:center;align-items:center;flex:1;min-height:48px;padding:7px 12px 10px;border:3px solid #152939;box-shadow:inset 2px 2px #ffffdf,3px 4px #152939;transform:skew(-8deg);font:900 italic clamp(18px,2.5vw,28px)/1.15 'Microsoft YaHei','PingFang SC',sans-serif;color:#152939;text-shadow:1px 2px #fff9e0;white-space:nowrap;overflow:hidden}
+.comic-button:before{content:'';position:absolute;inset:0;background-image:radial-gradient(#284c6d55 .7px,transparent .8px);background-size:5px 5px;mask-image:linear-gradient(120deg,transparent 60%,#000);pointer-events:none}
+.comic-blue{background:linear-gradient(135deg,#c7ebff,#7cbcf4)}
+.comic-gold{background:linear-gradient(135deg,#fff0a1,#f8cc44)}
+.comic-button:hover{filter:brightness(1.08)}
+.report-links{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:12px;font-size:12px;color:#172d45;font-weight:800}
+.report-links button,.report-links a{background:#fff3cfdd;padding:4px 8px;border:1px solid #2a415c;border-radius:2px;color:inherit;font:inherit}
+.report-links span{color:#fff8e7}
+.report-loading{min-height:350px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:25px;background:#fff8e5;border:3px solid #172938;color:#172938}
+.report-loading b{font:900 50px 'Courier New',monospace}
+.report-loading span{font-size:16px}
+.is-finished .hud-top,.is-finished .ddl-meter,.is-finished .score-panel{opacity:.3}
+@media(max-width:600px){
+  .arcade-home .welcome-copy{top:25%;width:98vw}
+  .home-start{top:55%;gap:14px}
+  .arcade-button{min-width:246px;min-height:66px;padding:10px 22px 13px;font-size:28px;gap:13px;border-width:4px}
+  .arcade-home .best-note{display:block;font-size:16px}
+  .game-shell .arcade-home .bird-companion{top:69%;width:280px;height:98px}
+  .game-shell .arcade-home .bird-perch{width:280px;height:98px}
+  .game-shell .arcade-home .bird-stage{width:86px;height:86px;left:96px}
+  .game-shell .arcade-home .bird-stage.perch-0{translate:-88px 0}
+  .game-shell .arcade-home .bird-stage.perch-1{translate:-59px -4px}
+  .game-shell .arcade-home .bird-stage.perch-2{translate:-29px 0}
+  .game-shell .arcade-home .bird-stage.perch-3{translate:0 -6px}
+  .game-shell .arcade-home .bird-stage.perch-4{translate:29px 0}
+  .game-shell .arcade-home .bird-stage.perch-5{translate:59px -4px}
+  .game-shell .arcade-home .bird-stage.perch-6{translate:88px 0}
+  .report-backdrop{padding:7px}
+  .report-dialog{width:100%;max-height:none}
+  .report-actions{gap:14px;padding:0 15px}
+  .comic-button{min-height:46px;font-size:21px}
+  .report-links{gap:7px;font-size:11px}
+}
+@media(max-height:540px){
+  .arcade-home .welcome-copy{top:10%;width:min(62vw,115vh)}
+  .home-start{top:60%;gap:8px}
+  .arcade-button{min-height:50px;font-size:25px;min-width:250px;padding:6px 24px 10px}
+  .arcade-home .best-note{display:block;font-size:14px}
+  .game-shell .arcade-home .bird-companion{top:73%;scale:.72}
+  .report-backdrop{align-items:flex-start}
+  .report-dialog{width:min(600px,88vw);max-height:none}
+}
+@media(prefers-reduced-motion:reduce){.arcade-button{animation:none}}
+
+.report-backdrop{font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;font-weight:500}
