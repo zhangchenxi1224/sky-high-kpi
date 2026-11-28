@@ -1,6 +1,7 @@
 import {GameEngine} from '../game/engine';
 import {CRANE_SCALE,CRANE_HEAD} from '../game/crane';
 import {RULES,seeded} from '../game/rules';
+import {temptationDefinition,temptationOutcome} from '../game/temptations';
 import {assetUrl} from '../features/assets';
 import {pixelFont} from '../features/pixel-font';
 import {metricColors,snap,portraitLayout} from './layout';
@@ -19,7 +20,7 @@ export class Renderer {
     this.fitnessSheet.src=assetUrl('fitness.webp');
     this.craneSheet.src=assetUrl('crane.png');
   }
-  get assetsReady(){return this.craneSheet.complete&&this.craneSheet.naturalWidth>0&&Array.from({length:13},(_,i)=>!!this.sprites[i]).every(Boolean);}
+  get assetsReady(){return this.craneSheet.complete&&this.craneSheet.naturalWidth>0&&Array.from({length:14},(_,i)=>!!this.sprites[i]).every(Boolean);}
   prepareSprites(){
     const s=document.createElement('canvas');s.width=this.sheet.width;s.height=this.sheet.height;const c=s.getContext('2d')!;c.drawImage(this.sheet,0,0);const pixels=c.getImageData(0,0,s.width,s.height).data;
     for(let i=0;i<12;i++){
@@ -28,6 +29,11 @@ export class Renderer {
       for(let y=cell.y;y<cell.y+cell.h;y++)for(let x=cell.x;x<cell.x+cell.w;x++){if(pixels[(y*s.width+x)*4+3]>100){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}}
       const out=document.createElement('canvas');out.width=176;out.height=176;const oc=out.getContext('2d')!;oc.imageSmoothingEnabled=false;oc.drawImage(this.sheet,x0,y0,x1-x0+1,y1-y0+1,0,0,176,176);this.sprites[i]=out;
     }
+    // Extend the established cafe room with a code-drawn pixel noodle bowl.
+    const snack=document.createElement('canvas');snack.width=176;snack.height=176;const sc=snack.getContext('2d')!;sc.imageSmoothingEnabled=false;sc.drawImage(this.sprites[5],0,0);
+    sc.fillStyle='#203347';sc.fillRect(30,88,40,58);
+    for(const [x,y,w,h,color] of [[32,118,36,8,'#fff9db'],[36,126,28,12,'#ff8d56'],[40,138,20,4,'#ffe066'],[36,114,28,4,'#ffe066'],[40,100,4,10,'#fff9db'],[52,94,4,14,'#fff9db'],[64,100,4,10,'#fff9db']] as const){sc.fillStyle=color;sc.fillRect(x,y,w,h);}
+    this.sprites[13]=snack;
   }
   resize(w:number,h:number,e:GameEngine){
     this.scale=w/h<.85?Math.min(w/430,h/760):h/720;this.width=w/this.scale;this.height=h/this.scale;
@@ -94,7 +100,7 @@ export class Renderer {
       if(e.current){const x=craneCenter+e.currentX,y=e.currentY+ground;
         c.save();c.translate(x,y+44);if(e.phase==='GAME_OVER')c.rotate(e.rotation);this.room(e.current.sprite,0,-44);c.restore();
         if(e.phase==='SWINGING'){
-          this.blockLabel(e.current.name,x,y,metricColors[e.current.kind],e.current.kind==='temptation');
+          this.blockLabel(e.current.name,x,y,metricColors[e.current.kind],e.current.kind==='temptation',e.current.kind==='temptation'?temptationDefinition(e.current.id).preview:[]);
         }
       }
     }
@@ -104,9 +110,9 @@ export class Renderer {
         if(motionEnabled){c.globalAlpha=Math.max(0,1-age/1);for(let i=0;i<12;i++){const a=i/12*Math.PI*2,r=45+age*65;c.fillStyle=i%2?'#fff9dc':'#ffe28a';c.fillRect(x+Math.cos(a)*r-2,y+58+Math.sin(a)*r-2,4,4);}c.globalAlpha=1;}
         this.pixelText('PERFECT',x,y-28,'#FFD43B',24);
       }
-      const last=e.tower.at(-1)!,negative=last.block.kind==='temptation';
+      const last=e.tower.at(-1)!,metric=last.block.kind==='temptation'?temptationOutcome(last.block.id,last.perfect).metric:last.block.kind,negative=metric==='temptation';
       const step=Math.min(7,Math.floor(age/.8*8)),travel=step*4;
-      if(age<.8)this.pixelText(e.rewardLabel,x+(negative&&step%2?2:0),y+(negative?travel*.5:-travel),metricColors[last.block.kind],16);
+      if(age<.8)this.pixelText(e.rewardLabel,x+(negative&&step%2?2:0),y+(negative?travel*.5:-travel),metricColors[metric],16);
       const feedback=this.detailedSway?e.detailedMotion.feedback:e.landingFeedback;
       if(feedback&&(!this.detailedSway||age<.8))this.pixelText(feedback,x,y+24,e.verdict==='PERFECT'?'#92E8AF':'#FFA94D',12);
     }
@@ -153,23 +159,29 @@ export class Renderer {
     const half=c.measureText(text).width/2;x=snap(Math.max(half+8,Math.min(visibleWidth-half-8,x)));y=snap(y);
     c.textAlign='center';c.lineJoin='miter';c.lineWidth=4;c.strokeStyle='#10172C';c.strokeText(text,x,y+2);c.strokeText(text,x,y);c.fillStyle=color;c.fillText(text,x,y);c.restore();
   }
-  blockLabel(text:string,x:number,y:number,color:string,temptation:boolean){
+  blockLabel(text:string,x:number,y:number,color:string,temptation:boolean,details:readonly string[]=[]){
     const c=this.ctx,t=c.getTransform(),dpr=Math.min(devicePixelRatio||1,2),roomScale=t.a/dpr,fontSize=12;
     x=(t.a*x+t.e)/dpr;y=(t.d*y+t.f)/dpr;c.save();c.setTransform(dpr,0,0,dpr,0,0);c.font=pixelFont(fontSize);c.textAlign='left';
-    const width=snap(c.measureText(text).width)+20+(temptation?12:0),height=24,screenWidth=this.canvas.width/dpr;
+    const lines=[text,...details],screenWidth=this.canvas.width/dpr;
+    const width=Math.min(screenWidth-16,snap(Math.max(...lines.map(line=>c.measureText(line).width)))+20+(temptation?12:0)),height=24+details.length*16;
     let left=snap(x+44*roomScale+10),top=snap(y+26*roomScale),arrow:'left'|'right'='left';
     if(left+width>screenWidth-8){left=snap(Math.max(8,x-44*roomScale-10-width));arrow='right';}
+    if(details.length){left=snap(Math.max(8,Math.min(screenWidth-width-8,x-width/2)));top=snap(y+88*roomScale+8);}
     const fill=temptation?'#38132A':'#151D33',edge=temptation?'#FF59B4':color;
     const box=(xx:number,yy:number,ww:number,hh:number,ink:string)=>{c.fillStyle=ink;c.fillRect(xx+4,yy,ww-8,hh);c.fillRect(xx,yy+4,ww,hh-8);c.fillRect(xx+2,yy+2,ww-4,hh-4);};
     box(left+2,top+2,width,height,'#000000');box(left,top,width,height,edge);box(left+2,top+2,width-4,height-4,fill);
-    if(arrow==='left'){
+    if(details.length){
+      const tip=snap(Math.max(left+8,Math.min(left+width-8,x)));
+      for(let i=0;i<3;i++){c.fillStyle=edge;c.fillRect(tip-i*2,top-6+i*2,2+i*4,2);}
+    }else if(arrow==='left'){
       for(let i=0;i<3;i++){c.fillStyle=edge;c.fillRect(left-6+i*2,top+12-i*2,2,4+i*4);}c.fillStyle=fill;c.fillRect(left-2,top+10,4,8);
     }else{
       for(let i=0;i<3;i++){c.fillStyle=edge;c.fillRect(left+width+i*2,top+8+i*2,2,12-i*4);}c.fillStyle=fill;c.fillRect(left+width-2,top+10,4,8);
     }
     let tx=left+10;
     if(temptation){c.fillStyle='#FFD43B';c.fillRect(tx+2,top+8,4,4);c.fillRect(tx+2,top+14,4,2);tx+=12;}
-    c.fillStyle='#FFF9DB';c.fillText(text,tx,top+18);c.restore();
+    c.fillStyle='#FFF9DB';c.fillText(text,tx,top+18);
+    details.forEach((line,i)=>{c.fillStyle=i===0?'#FFE066':'#FFF9DB';c.fillText(line,left+10,top+34+i*16);});c.restore();
   }
   drawSky(e:GameEngine){
     const w=this.width,h=this.height,c=this.ctx,alt=Math.min(1,e.floor/55),night=this.night?1:Math.max(0,(e.floor-22)/32);const k=`${Math.round(w)}-${Math.round(h)}-${Math.floor(e.cameraY/22)}-${this.night}`;

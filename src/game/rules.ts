@@ -1,6 +1,7 @@
 import memes from '../config/memePack.json';
+import {eligibleTemptations,temptationOutcome} from './temptations';
 const swingSpeedScale=1.08, swingAngleScale=1.06;
-export const RULES = {version:'2026.11.8', width:88, height:88, gravity:1400, ddl:6, perfect:.06, volunteerPerfect:.12, omegaMin:1.43*swingSpeedScale,omegaMax:3.905*swingSpeedScale,highPressureOmega:3.135*swingSpeedScale,angleMin:18*swingAngleScale,angleMax:45*swingAngleScale,towerSway:true,fitnessChance:.04,fitnessKpi:30,fitnessBoost:.15};
+export const RULES = {version:'2026.11.9', width:88, height:88, gravity:1400, ddl:6, perfect:.06, volunteerPerfect:.12, omegaMin:1.43*swingSpeedScale,omegaMax:3.905*swingSpeedScale,highPressureOmega:3.135*swingSpeedScale,angleMin:18*swingAngleScale,angleMax:45*swingAngleScale,towerSway:true,fitnessChance:.04,fitnessKpi:30,fitnessBoost:.15};
 export const OPENING_DRAW_RULES={lastFloor:8,maxStudyStreak:2};
 export const TEMPTATION_RULES={cooldown:3,minGpa:.30,highPressureMultiplier:1.5,minDifficultyProgress:.65,reliefDecay:1};
 export const temptationRelief=(floor:number)=>floor<=20?6:floor<=40?4:2;
@@ -21,10 +22,10 @@ export function difficulty(n:number,rollback=0){
 export const judge=(delta:number,kind:Kind)=>Math.abs(delta)<=RULES.width*(kind==='volunteer'?.12:.06)+1e-9?'PERFECT':Math.abs(delta)<=RULES.width*.5+1e-9?'SUCCESS':'MISS';
 const drawKinds=['study','volunteer','practice','research','competition','coffee','notes','temptation','fitness'] as const;
 const drawSchedule=[
-  {floor:3,  percent:[60,25,15, 0, 0,0,0,0],temptation:0},
-  {floor:8,  percent:[48,16,14, 8, 6,4,3,1],temptation:.01},
-  {floor:20, percent:[40,13,12,12,11,5,4,3],temptation:.02},
-  {floor:35, percent:[34,11,12,15,14,5,4,5],temptation:.03},
+  {floor:3,  percent:[40,22,16,12,10,0,0,0],temptation:0},
+  {floor:8,  percent:[38,17,12,12,10,4,2,1],temptation:.01},
+  {floor:20, percent:[40,12,10,14,11,4,3,2],temptation:.02},
+  {floor:35, percent:[38,10,10,15,13,4,3,3],temptation:.03},
 ];
 export function weights(n:number,boostTemptation=false,context:{recentTemptation?:boolean;gpa?:number;history?:readonly Kind[]}={}){
   const floor=clamp(n,drawSchedule[0].floor,drawSchedule.at(-1)!.floor);
@@ -34,10 +35,9 @@ export function weights(n:number,boostTemptation=false,context:{recentTemptation
   const blend=t*t*(3-2*t);
   const base=start.percent.map((p,i)=>(p+(end.percent[i]-p)*blend)/100);
   const temptation=drawKinds.indexOf('temptation');
-  const original=base[temptation];
   const natural=start.temptation+(end.temptation-start.temptation)*blend;
-  const blocked=context.recentTemptation||(context.gpa??4)<TEMPTATION_RULES.minGpa;
-  const selected=blocked?0:natural*(boostTemptation?TEMPTATION_RULES.highPressureMultiplier:1);
+  const eligibleShare=eligibleTemptations(context.gpa??4).reduce((sum,t)=>sum+t.weight,0);
+  const selected=context.recentTemptation?0:natural*(boostTemptation?TEMPTATION_RULES.highPressureMultiplier:1)*eligibleShare;
   const recent=context.history?.slice(-OPENING_DRAW_RULES.maxStudyStreak)??[];
   const restStudy=n<=OPENING_DRAW_RULES.lastFloor&&recent.length===OPENING_DRAW_RULES.maxStudyStreak&&recent.every(kind=>kind==='study');
   const positive=base.map((p,i)=>i===temptation||(restStudy&&i===0)?0:p);
@@ -45,7 +45,7 @@ export function weights(n:number,boostTemptation=false,context:{recentTemptation
   // Keep fitness at 4%; redistribute protected temptation odds among positive categories.
   // The opening cooldown only redistributes study odds among the other positive kinds.
   const fitness=n>=4?RULES.fitnessChance:0;
-  return [...positive.map((p,i)=>i===temptation?selected:p*(1-selected-fitness)/(restStudy?positiveTotal:1-original)),fitness];
+  return [...positive.map((p,i)=>i===temptation?selected:p*(1-selected-fitness)/positiveTotal),fitness];
 }
 export const seeded=(seed:number)=>()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};
 export const catalog:Block[]=[
@@ -65,7 +65,7 @@ export const catalog:Block[]=[
   {id:'coffee',kind:'coffee',name:'续命冰美式',sprite:5,value:0},
   {id:'notes',kind:'notes',name:'复习邪修秘籍',sprite:6,value:.1},
   {id:'fitness',kind:'fitness',name:'体测训练室',sprite:12,value:0},
-  ...memes.temptationSkins.map(s=>({id:s.id,kind:'temptation' as Kind,name:s.name,sprite:s.sprite,value:-.15}))
+  ...memes.temptationSkins.map(s=>({id:s.id,kind:'temptation' as Kind,name:s.name,sprite:s.sprite,value:0}))
 ];
 export function drawBlock(n:number,random:()=>number,highPressure:boolean,recentTemptation:boolean,gpa=4,history:readonly Kind[]=[]):Block {
   const pick=(list:Block[])=>({...list[Math.min(list.length-1,Math.floor(random()*list.length))]});
@@ -74,6 +74,11 @@ export function drawBlock(n:number,random:()=>number,highPressure:boolean,recent
   let index=0;
   while(index<odds.length-1&&roll>=odds[index]){
     roll-=odds[index++];
+  }
+  if(drawKinds[index]==='temptation'){
+    const eligible=eligibleTemptations(gpa);let choice=random()*eligible.reduce((sum,t)=>sum+t.weight,0);
+    const chosen=eligible.find(t=>(choice-=t.weight)<0)??eligible.at(-1)!;
+    return {...catalog.find(b=>b.id===chosen.id)!};
   }
   return pick(catalog.filter(b=>b.kind===drawKinds[index]));
 }
@@ -84,9 +89,11 @@ export function reward(kpi:KPI,block:Block,perfect:boolean,combo:number,practice
   if(block.kind==='coffee')return {kpi:k,label:'冰美式 · 减速 5 秒',multiplier};
   if(block.kind==='fitness')return {kpi:k,label:'体测完成 · 无综测收益',multiplier};
   if(block.kind==='temptation'){
-    k.gpa=Math.max(0,round(k.gpa-.15));
-    const cost=round(kpi.gpa-k.gpa);
-    return {kpi:k,label:cost?`GPA −${cost.toFixed(2)}`:'GPA 0.00',multiplier};
+    const effect=temptationOutcome(block.id,perfect);
+    k.gpa=Math.max(0,round(k.gpa-(effect.gpaCost??0)));
+    k.practice=round(k.practice+(effect.practice??0));k.competition=round(k.competition+(effect.competition??0));
+    const label=effect.gpaCost?`GPA −${round(kpi.gpa-k.gpa).toFixed(2)}`:effect.label;
+    return {kpi:k,label,multiplier:1};
   }
 
   const stat=block.kind==='study'||block.kind==='notes'?'gpa':block.kind;
@@ -120,7 +127,7 @@ export function getSocialProfile(k:KPI){
   const metrics=socialMetrics(k);
   return {metrics,profile:memes.socialProfiles.find(p=>p.id===metrics.id)!};
 }
-export type TitleStats={floor:number;kpi:KPI;accepted:number;maxSkipStreak:number;maxCombo:number;researchImperfect:number;counts:Partial<Record<Kind,number>>;lateLandings?:number;narrowLandings?:number;ddlForcedMiss?:boolean};
+export type TitleStats={floor:number;kpi:KPI;accepted:number;costlyAccepted?:number;maxSkipStreak:number;maxCombo:number;researchImperfect:number;counts:Partial<Record<Kind,number>>;lateLandings?:number;narrowLandings?:number;ddlForcedMiss?:boolean};
 export function getTitle(s:TitleStats){
   const k=s.kpi;const volunteerValue=k.volunteer*5+k.practice*20;const social=socialMetrics(k);
   const nGpa=clamp(k.gpa/4,0,1),nResearch=clamp(k.research/15,0,1),nCompetition=clamp(k.competition/30,0,1),nVolunteer=clamp(k.volunteer/30,0,1),nPractice=clamp(k.practice/15,0,1);
@@ -133,8 +140,8 @@ export function getTitle(s:TitleStats){
   const candidates:[string,boolean][]=[
     ['chenze1103',exactScore===1103],
     ['zeroGpa',s.floor>=10&&k.gpa===0],
-    ['secretGrinder',s.accepted>=2&&s.floor>=22&&k.gpa>=3.3],
-    ['temptation',s.accepted>=3],
+    ['secretGrinder',(s.costlyAccepted??s.accepted)>=2&&s.floor>=22&&k.gpa>=3.3],
+    ['temptation',(s.costlyAccepted??s.accepted)>=3],
     ['resist',s.maxSkipStreak>=3&&s.floor>20],
     ['comeback',comeback],
     ['champion',s.floor>=30&&k.gpa>=3.8],

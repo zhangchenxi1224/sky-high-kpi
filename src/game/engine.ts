@@ -1,4 +1,5 @@
-import {RULES, TEMPTATION_RULES, temptationRelief, catalog, difficulty, drawBlock, emptyKpi, FIXED_SEQUENCE, judge, reward, score, seeded, type Block, type Kind, type KPI} from './rules';
+import {RULES, TEMPTATION_RULES, clamp, round, catalog, difficulty, drawBlock, emptyKpi, FIXED_SEQUENCE, judge, reward, score, seeded, type Block, type Kind, type KPI} from './rules';
+import {temptationDefinition,temptationOutcome,emptyTemptationMetrics,type TemptationBuff,type TemptationMetrics} from './temptations';
 import {hookPosition} from './hook';
 import {CRANE_SCALE} from './crane';
 import {TowerMotion} from './tower-motion';
@@ -10,7 +11,7 @@ export type Phase='READY'|'SWINGING'|'DROPPING'|'RESOLVE'|'CAMERA_SHIFT'|'GAME_O
 export type Placed={block:Block;x:number;y:number;perfect:boolean};
 export type GameEvent={type:'start'|'spawn'|'drop'|'land'|'miss'|'over'|'skip'|'warning'|'message';text?:string;perfect?:boolean;combo?:number};
 export type ActiveStatus={id:string;tone:'positive'|'negative';symbol:string;label:string;description:string};
-export type Snapshot={phase:Phase;floor:number;kpi:KPI;score:number;ddl:number;current:Block|null;combo:number;comboCue:ComboCue;feverAt:number;maxCombo:number;perfects:number;accepted:number;skipped:number;maxSkipStreak:number;researchImperfect:number;lateLandings:number;narrowLandings:number;ddlForcedMiss:boolean;counts:Partial<Record<Kind,number>>;paused:boolean;finished:boolean;forced:boolean;rollback:number;statuses:ActiveStatus[];buffs:string[];message:string;messageUntil:number;rewardLabel:string;verdict:string;seed:number;mode:'normal'|'fixed';elapsed:number};
+export type Snapshot={phase:Phase;floor:number;kpi:KPI;score:number;ddl:number;ddlLimit:number;current:Block|null;combo:number;comboCue:ComboCue;feverAt:number;maxCombo:number;perfects:number;accepted:number;costlyAccepted:number;temptationStats:Record<string,TemptationMetrics>;skipped:number;maxSkipStreak:number;researchImperfect:number;lateLandings:number;narrowLandings:number;ddlForcedMiss:boolean;counts:Partial<Record<Kind,number>>;paused:boolean;finished:boolean;forced:boolean;rollback:number;statuses:ActiveStatus[];buffs:string[];message:string;messageUntil:number;rewardLabel:string;verdict:string;seed:number;mode:'normal'|'fixed';elapsed:number};
 export class GameEngine {
   phase:Phase='READY';floor=0;kpi=emptyKpi();combo=0;maxCombo=0;perfects=0;accepted=0;skipped=0;skipStreak=0;maxSkipStreak=0;researchImperfect=0;lateLandings=0;narrowLandings=0;ddlForcedMiss=false;private dropDdl=RULES.ddl;counts:Partial<Record<Kind,number>>={};
   tower:Placed[]=[];current:Block|null=null;currentX=0;currentY=0;velocity=0;rotation=0;phaseAngle=-.65;hookAngle=0;hookX=0;hookY=0;anchorX=0;
@@ -23,6 +24,8 @@ export class GameEngine {
   readonly detailedMotion=new TowerMotion();
   speedNext=1;angleNext=1;speedMultiplier=1;angleMultiplier=1;practiceLeft=0;notesLeft=0;coffeeUntil=0;
   fitnessLeft=0;fitnessActive=false;angleBoostActive=false;
+  ddlLimit=RULES.ddl;costlyAccepted=0;temptationStats:Record<string,TemptationMetrics>={};
+  temptationNext:(TemptationBuff&{origin:string})|null=null;temptationActive:(TemptationBuff&{origin:string})|null=null;
   message='';messageUntil=0;rewardLabel='';verdict='';lastLandTime=-5;drawHistory:Kind[]=[];drawIndex=0;
   seed:number;mode:'normal'|'fixed';random:()=>number;listeners=new Set<(event:GameEvent)=>void>();private accumulator=0;private extremeAnnounced=false;
   constructor(seed=Date.now()>>>0,mode:'normal'|'fixed'='normal'){this.seed=seed;this.mode=mode;this.random=seeded(seed);}
@@ -65,9 +68,17 @@ export class GameEngine {
     return Math.min(-48,lowestPivot)*CRANE_SCALE-(1-CRANE_SCALE)*this.viewportTop/this.viewZoom;
   }
   get coffeeRemaining(){return Math.max(0,this.coffeeUntil-this.time);}
-  get params(){const d=difficulty(this.floor+1,this.rollback),fitness=this.fitnessActive?1+RULES.fitnessBoost:1;return {...d,omega:d.omega*this.speedMultiplier*(this.coffeeRemaining>0?.55:1)*fitness,angle:d.angle*this.angleMultiplier*fitness};}
+  private temptationMetrics(id:string){return this.temptationStats[id]??=emptyTemptationMetrics();}
+  get params(){
+    const d=difficulty(this.floor+1),fitness=this.fitnessActive?1+RULES.fitnessBoost:1;
+    const speed=clamp(this.speedMultiplier*(this.coffeeRemaining>0?.55:1)*fitness*(this.temptationActive?.speed??1),.55,1.35);
+    const angle=clamp(this.angleMultiplier*fitness*(this.temptationActive?.angle??1),.7,1.35);
+    return {...d,omega:d.omega*speed,angle:d.angle*angle};
+  }
   start(){if(this.phase!=='READY')return false;this.emit({type:'start'});this.spawn();return true;}
   spawn(){
+    this.temptationActive=this.temptationNext;this.temptationNext=null;
+    if(this.temptationActive)this.temptationMetrics(this.temptationActive.origin).buffTurns++;
     this.angleBoostActive=this.angleNext>1;
     this.fitnessActive=this.fitnessLeft>0;if(this.fitnessActive)this.fitnessLeft--;
     this.speedMultiplier=this.speedNext;this.speedNext=1;
@@ -75,15 +86,16 @@ export class GameEngine {
     const high=this.params.omega>=RULES.highPressureOmega;
     const id=FIXED_SEQUENCE[this.drawIndex%FIXED_SEQUENCE.length];
     this.current=this.mode==='fixed'?{...catalog.find(b=>b.id===id)!}:drawBlock(this.floor+1,this.random,high,this.drawHistory.slice(-TEMPTATION_RULES.cooldown).includes('temptation'),this.kpi.gpa,this.drawHistory);
+    if(this.current.kind==='temptation')this.temptationMetrics(this.current.id).offered++;
     this.drawIndex++;this.drawHistory.push(this.current.kind);if(this.drawHistory.length>4)this.drawHistory.shift();
-    this.phase='SWINGING';this.phaseTime=0;this.ddl=RULES.ddl;this.dropDdl=RULES.ddl;this.forced=false;this.warningPlayed=false;this.velocity=0;this.rotation=0;this.anchorX=this.topX;
+    this.phase='SWINGING';this.phaseTime=0;this.ddlLimit=clamp(RULES.ddl+(this.temptationActive?.ddl??0),6,7);this.ddl=this.ddlLimit;this.dropDdl=this.ddlLimit;this.forced=false;this.warningPlayed=false;this.velocity=0;this.rotation=0;this.anchorX=this.topX;
     this.phaseAngle=(this.drawIndex%2?-.65:.65);this.updateHook();this.emit({type:'spawn'});
-    if(this.current.kind==='temptation')this.say(`GPA −0.15 · 难度暂缓，最多 ${temptationRelief(this.floor+1)} 层`);
+    if(this.current.kind==='temptation')this.say(temptationDefinition(this.current.id).preview.join(' · '));
     else if(this.params.omega>RULES.omegaMax*.8&&!this.extremeAnnounced){this.say(this.choose(memes.danmakuBank.extremeSpeed));this.extremeAnnounced=true;}
   }
   updateHook(){const p=hookPosition(this.phaseAngle,this.params.angle,this.ropeLength);this.hookAngle=p.angle;this.hookX=this.anchorX+p.x;this.hookY=this.hookPivotY+p.y;this.currentX=this.hookX;this.currentY=this.hookY+hookToBrick-this.groundScreen-this.cameraY;}
   drop(forced=false){if(this.phase!=='SWINGING'||this.paused)return false;this.dropDdl=this.ddl;this.phase='DROPPING';this.phaseTime=0;this.velocity=0;this.forced=forced;if(forced)this.say('DDL 到了！死线强制提交');this.emit({type:'drop'});return true;}
-  skipCurrentBlock(){if(this.phase!=='SWINGING'||this.paused||this.current?.kind!=='temptation')return false;const skin=memes.temptationSkins.find(s=>s.id===this.current!.id)!;this.skipped++;this.skipStreak++;this.maxSkipStreak=Math.max(this.maxSkipStreak,this.skipStreak);this.emit({type:'skip'});this.spawn();this.say(skin.skipDanmaku);return true;}
+  skipCurrentBlock(){if(this.phase!=='SWINGING'||this.paused||this.current?.kind!=='temptation')return false;const skin=memes.temptationSkins.find(s=>s.id===this.current!.id)!;this.temptationMetrics(this.current.id).skipped++;this.skipped++;this.skipStreak++;this.maxSkipStreak=Math.max(this.maxSkipStreak,this.skipStreak);this.emit({type:'skip'});this.spawn();this.say(skin.skipDanmaku);return true;}
   togglePause(){if(this.phase==='READY'||this.finished)return;this.paused=!this.paused;}
   update(dt:number,autoDrop?:(game:GameEngine)=>boolean){
     if(this.paused||this.phase==='READY'||this.finished)return;
@@ -105,7 +117,7 @@ export class GameEngine {
       this.sway+=this.swayVelocity*dt;
     }
     if(this.phase==='SWINGING'){
-      this.phaseAngle+=this.params.omega*dt;this.updateHook();this.ddl=Math.max(0,RULES.ddl-this.phaseTime);
+      this.phaseAngle+=this.params.omega*dt;this.updateHook();this.ddl=Math.max(0,this.ddlLimit-this.phaseTime);
       if(this.ddl<=2&&!this.warningPlayed){this.warningPlayed=true;this.emit({type:'warning'});}
       if(this.ddl<=1e-8)this.drop(true);
     }else if(this.phase==='DROPPING'){
@@ -125,6 +137,7 @@ export class GameEngine {
   private resolve(){
     if(!this.current)return;const block=this.current,delta=this.currentX-this.topX;const verdict=judge(delta,block.kind);this.verdict=verdict;
     if(verdict==='MISS'){
+      if(block.kind==='temptation')this.temptationMetrics(block.id).miss++;
       this.ddlForcedMiss=this.forced;
       if(this.combo>=2)this.comboCue={value:this.combo,at:this.time,broken:true,serial:this.comboCue.serial+1};
       this.combo=0;
@@ -150,9 +163,9 @@ export class GameEngine {
     }
     // Only 2 world pixels of correction; the remaining offset stays real.
     if(perfect)this.currentX-=Math.sign(delta)*Math.min(2,Math.abs(delta));
+    const before=this.kpi;
     const r=reward(this.kpi,block,perfect,this.combo,this.practiceLeft>0);this.kpi=r.kpi;this.rewardLabel=r.label;
     if(this.practiceLeft>0)this.practiceLeft--;
-    if(block.kind!=='temptation')this.rollback=Math.max(0,this.rollback-TEMPTATION_RULES.reliefDecay);
     switch(block.kind){
       case 'research':this.speedNext=1.12;if(!perfect)this.researchImperfect++;this.say('导师加活！下一块摆速 +12%');break;
       case 'competition':if(Math.abs(delta)>RULES.width*.25){this.angleNext=1.15;this.say('熬夜赶 PPT！下一块摆幅 +15%');}break;
@@ -163,7 +176,15 @@ export class GameEngine {
         if(this.kpi.competition+this.kpi.volunteer>=RULES.fitnessKpi)this.say('体测达标 · 竞赛与志愿合计 30，摆速不变');
         else {const turns=1+Math.floor(this.random()*3);this.fitnessLeft=Math.max(this.fitnessLeft,turns);this.say(`体测加练！后 ${turns} 投摆速与摆幅 +15%`);}
         break;
-      case 'temptation':this.accepted++;this.skipStreak=0;this.rollback=temptationRelief(this.floor+1);this.say(memes.temptationSkins.find(s=>s.id===block.id)!.acceptDanmaku+` · 难度暂缓，最多 ${this.rollback} 层`);break;
+      case 'temptation':{
+        const effect=temptationOutcome(block.id,perfect),metrics=this.temptationMetrics(block.id);
+        this.accepted++;this.skipStreak=0;metrics.accepted++;metrics[perfect?'perfect':'success']++;
+        metrics.gpaCost=round(metrics.gpaCost+before.gpa-this.kpi.gpa);
+        metrics.practice=round(metrics.practice+this.kpi.practice-before.practice);metrics.competition=round(metrics.competition+this.kpi.competition-before.competition);
+        if(effect.gpaCost||effect.buff?.tone==='negative')this.costlyAccepted++;
+        if(effect.buff)this.temptationNext={...effect.buff,origin:block.id};
+        this.say(`${block.name} · ${r.label}${effect.buff&&effect.gpaCost?' · 下投摆速 −20%':''}`);break;
+      }
     }
     this.floor++;this.counts[block.kind]=(this.counts[block.kind]??0)+1;
     this.currentY=-this.floor*RULES.height;this.tower.push({block,x:this.currentX,y:this.currentY,perfect});this.current=null;
@@ -184,6 +205,8 @@ export class GameEngine {
     if(this.speedNext>1||(inFlight&&this.speedMultiplier>1))statuses.push({id:'research',tone:'negative',symbol:'»',label:'+12% · ×1',description:'导师加活：摆速增加 12%，剩余 1 投'});
     if(this.angleNext>1||(inFlight&&this.angleBoostActive))statuses.push({id:'competition',tone:'negative',symbol:'↔',label:'+15% · ×1',description:'PPT 手抖：摆幅增加 15%，剩余 1 投'});
     if(fitnessTurns>0)statuses.push({id:'fitness',tone:'negative',symbol:'↗',label:`+15% · ×${fitnessTurns}`,description:`体测加练：摆速与摆幅增加 15%，剩余 ${fitnessTurns} 投`});
+    const temptation=this.temptationNext??(inFlight?this.temptationActive:null);
+    if(temptation)statuses.push({id:`tempt-${temptation.id}`,tone:temptation.tone,symbol:temptation.symbol,label:temptation.label,description:`${temptation.source}：${temptation.label}，${this.temptationNext?'下一投生效':'当前一投生效'}`});
     const buffs:string[]=[];
     if(this.notesLeft>0||this.angleMultiplier<1)buffs.push('秘籍 · 摆幅 −30%');
     if(this.practiceLeft>0)buffs.push(`实践 +25% · 剩 ${this.practiceLeft} 块`);
@@ -191,6 +214,6 @@ export class GameEngine {
     if(this.angleMultiplier>1)buffs.push('PPT 手抖 +15%');
     const fitness=this.fitnessLeft+(this.fitnessActive?1:0);
     if(fitness>0)buffs.push(`体测加练 · ${fitness} 投摆速/幅 +15%`);
-    return {phase:this.phase,floor:this.floor,kpi:{...this.kpi},score:score(this.floor,this.kpi),ddl:this.ddl,current:this.current,combo:this.combo,comboCue:{...this.comboCue},feverAt:this.feverAt,maxCombo:this.maxCombo,perfects:this.perfects,accepted:this.accepted,skipped:this.skipped,maxSkipStreak:this.maxSkipStreak,researchImperfect:this.researchImperfect,lateLandings:this.lateLandings,narrowLandings:this.narrowLandings,ddlForcedMiss:this.ddlForcedMiss,counts:{...this.counts},paused:this.paused,finished:this.finished,forced:this.forced,rollback:this.rollback,statuses,buffs,message:this.message,messageUntil:this.messageUntil,rewardLabel:this.rewardLabel,verdict:this.verdict,seed:this.seed,mode:this.mode,elapsed:this.time};
+    return {phase:this.phase,floor:this.floor,kpi:{...this.kpi},score:score(this.floor,this.kpi),ddl:this.ddl,ddlLimit:this.ddlLimit,current:this.current,combo:this.combo,comboCue:{...this.comboCue},feverAt:this.feverAt,maxCombo:this.maxCombo,perfects:this.perfects,accepted:this.accepted,costlyAccepted:this.costlyAccepted,temptationStats:Object.fromEntries(Object.entries(this.temptationStats).map(([id,stats])=>[id,{...stats}])),skipped:this.skipped,maxSkipStreak:this.maxSkipStreak,researchImperfect:this.researchImperfect,lateLandings:this.lateLandings,narrowLandings:this.narrowLandings,ddlForcedMiss:this.ddlForcedMiss,counts:{...this.counts},paused:this.paused,finished:this.finished,forced:this.forced,rollback:this.rollback,statuses,buffs,message:this.message,messageUntil:this.messageUntil,rewardLabel:this.rewardLabel,verdict:this.verdict,seed:this.seed,mode:this.mode,elapsed:this.time};
   }
 }

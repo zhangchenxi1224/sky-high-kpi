@@ -28,7 +28,7 @@ test('one hundred thousand seeded openings cannot contain three consecutive stud
     if(baseline.every(kind=>kind==='study'))originalThreeStudy++;
     assert.ok(new Set(history.slice(0,3)).size>=2||history[0]!=='study');
   }
-  assert.ok(Math.abs(originalThreeStudy/100000-.216)<.01);
+  assert.ok(Math.abs(originalThreeStudy/100000-.064)<.01);
 });
 
 test('normal engine wires in draw history and stops the opening restriction from floor nine',()=>{

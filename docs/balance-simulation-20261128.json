@@ -1,5 +1,5 @@
 {
-  "status": "proposal_not_deployed",
+  "status": "historical_draw_only",
   "rulesVersion": "2026.11.7",
   "runsPerVariant": 50000,
   "offersPerRun": 60,

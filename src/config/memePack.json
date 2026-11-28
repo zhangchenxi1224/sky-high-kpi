@@ -1,11 +1,12 @@
 {
-  "version": "2026.11.28-titles20",
+  "version": "2026.11.28-balance-b",
   "temptationSkins": [
     {"id":"tempt_hongguo","name":"先看两集红果","sprite":7,"primaryColor":"#d95e54","acceptDanmaku":"贵是贵了点，但看了不烧心！","skipDanmaku":"退！别给我看霸总重生！"},
     {"id":"tempt_kangshen","name":"康神开播了","sprite":8,"primaryColor":"#ec8baa","acceptDanmaku":"瓦场悟道，绩点算什么？","skipDanmaku":"忍住！等保研了再看回放！"},
     {"id":"tempt_delta","name":"三角洲跑刀","sprite":9,"primaryColor":"#454b63","acceptDanmaku":"得吃の小曲响起！千万撤离！","skipDanmaku":"别叫了，室友自己去航天基地吧"},
     {"id":"tempt_hok","name":"赢一把王者就睡","sprite":10,"primaryColor":"#4387c9","acceptDanmaku":"连跪三把，但精神状态很稳定","skipDanmaku":"已老实，卸载保平安"},
-    {"id":"tempt_selflove","name":"爱你老己","sprite":11,"primaryColor":"#edb55c","acceptDanmaku":"爱你老己，明天见！","skipDanmaku":"老己对不起，今天还得卷！"}
+    {"id":"tempt_selflove","name":"爱你老己","sprite":11,"primaryColor":"#edb55c","acceptDanmaku":"爱你老己，明天见！","skipDanmaku":"老己对不起，今天还得卷！"},
+    {"id":"tempt_snack","name":"夜宵补给","sprite":13,"primaryColor":"#92e8af","acceptDanmaku":"吃饱再卷，多给一秒！","skipDanmaku":"先把这层盖好再吃！"}
   ],
   "danmakuBank": {
     "perfectStreak3":["夯爆了！","助我破鼎！","此人的手速恐怕在我之上","老师海底捞稳了","神之六秒","胆子真是肥嘟嘟的","这波不烧心","低山臭水遇知音"],
@@ -18,7 +19,7 @@
     {"rule":"chenze1103","name":"1103号编外老铁","comment":"成功之路步履蹒跚，举旗呐喊1103；分数卡在1103，编外老铁也能站上峡谷之巅。泽哥看了都得说一句：行了老铁，进来坐。","stamp":"峡谷之巅"},
     {"rule":"zeroGpa","name":"零绩点精神自由人","comment":"叠了十层楼，绩点硬是干到了 0.00；学分可以不要，快乐绝不打折，精神状态遥遥领先。","stamp":"爱你老己"},
     {"rule":"secretGrinder","name":"嘴上摆烂背地满绩","comment":"朋友圈天天发“今天不卷了”，背地里一边刷红果一边冲上 22 层。嘴上摆烂，手比谁都稳。","stamp":"装弱卷王"},
-    {"rule":"temptation","name":"赛博奶头乐首席鉴赏官","comment":"三次接住红果、直播和跑刀，GPA 被啃掉 0.45，快乐倒是很稳定。","stamp":"再看一集"},
+    {"rule":"temptation","name":"赛博奶头乐首席鉴赏官","comment":"三次接下有代价的诱惑，绩点和吊车都感受到了你的选择；快乐很稳定，落点可得看准。","stamp":"再看一集"},
     {"rule":"resist","name":"无情预制卷王","comment":"康神开播先验牌，跑刀喊你先拒绝；三次忍住诱惑，20 层后还在硬扛。","stamp":"我要验牌"},
     {"rule":"comeback","name":"校园萧炎","comment":"绩点暂时没起飞，竞赛和实践已经开始冒火；三十年河东，三十年河西，莫欺少年穷。","stamp":"莫欺少年穷"},
     {"rule":"champion","name":"瓦场悟道 · 破鼎战神","comment":"30 层以上、GPA 3.80 以上；绩点基础，瓦场悟道就不基础。","stamp":"夯爆了"},

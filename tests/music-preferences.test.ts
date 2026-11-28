@@ -10,7 +10,7 @@ test('every visit enables music and FX, keeps bird talk quiet, and preserves sco
     const {usePreferences}=await import('../src/store');
     await usePreferences.persist.rehydrate();
     const migrated=usePreferences.getState();
-    assert.equal(migrated.music,true);assert.deepEqual(migrated.records,records);
+    assert.equal(migrated.music,true);assert.deepEqual(migrated.legacyRecords,records);
     assert.equal(migrated.effects,true);assert.equal(migrated.night,true);assert.equal(migrated.birdBubble,false);assert.equal(migrated.detailedSway,false);
     assert.equal(JSON.parse(values.get('sky-high-kpi-v1')!).version,1);
     migrated.toggle('music');assert.equal(usePreferences.getState().music,false);
@@ -20,6 +20,6 @@ test('every visit enables music and FX, keeps bird talk quiet, and preserves sco
     for(const key of ['music','effects','birdBubble'])assert.equal(key in stored,false);
     await usePreferences.persist.rehydrate();assert.equal(usePreferences.getState().music,true);assert.equal(usePreferences.getState().effects,true);
     assert.equal(usePreferences.getState().birdBubble,false);
-    assert.deepEqual(usePreferences.getState().records,records);
+    assert.deepEqual(usePreferences.getState().legacyRecords,records);
   }finally{Reflect.deleteProperty(globalThis,'localStorage');Reflect.deleteProperty(globalThis,'window');}
 });

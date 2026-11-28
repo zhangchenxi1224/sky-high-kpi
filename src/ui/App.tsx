@@ -1,6 +1,8 @@
 import {useEffect,useRef,useState} from 'react';
 import {GameEngine,type Snapshot} from '../game/engine';
 import {getTitle,RULES} from '../game/rules';
+import {TEMPTATIONS,temptationDefinition} from '../game/temptations';
+import memes from '../config/memePack.json';
 import {Renderer} from '../view/renderer';
 import {Sound} from '../features/audio';
 import {ResultScreen} from './ResultScreen';
@@ -39,7 +41,7 @@ const instructions=[
   ['体测','第 4 层起固定 4%；竞赛+志愿 ≥ 30 达标，否则后 1～3 投摆速/幅 +15%',12],
   ['冰美式','未来 5 秒摆速 −45%',5],
   ['邪修秘籍','GPA +0.10，后三投摆幅 −30%',6],
-  ['赛博诱惑','GPA −0.15，难度暂缓 6 / 4 / 2 层，不叠加；每落稳一块非诱惑砖恢复一档。出现后至少间隔 3 块，GPA 低于 0.30 时不再出现；可免费跳过',11],
+  ...TEMPTATIONS.map(t=>{const skin=memes.temptationSkins.find(s=>s.id===t.id)!;return [skin.name,t.preview.join('；'),skin.sprite] as const;}),
 ] as const;
 export function App(){
   const canvas=useRef<HTMLCanvasElement>(null),engine=useRef<GameEngine>(new GameEngine(initialSeed,mode)),renderer=useRef<Renderer|null>(null),sound=useRef(new Sound());
@@ -98,7 +100,7 @@ export function App(){
       const final=e.snapshot(),earned=earnBirdFood(loadBirdDay(),final.score);
       saveBirdDay(earned.day);setBirdDay(earned.day);setBirdGained(earned.gained);
       const title=getTitle(final);
-      setBirdEnding(usePreferences.getState().save({date:new Date().toISOString(),floor:final.floor,score:final.score,gpa:final.kpi.gpa,title:title.name,personaId:title.rule}));
+      setBirdEnding(usePreferences.getState().save({date:new Date().toISOString(),floor:final.floor,score:final.score,gpa:final.kpi.gpa,title:title.name,personaId:title.rule,temptationStats:final.temptationStats}));
     }
     refresh();
   });};
@@ -140,6 +142,7 @@ export function App(){
   return <main className={`game-shell ${preview?'is-home':''} ${s.finished?'is-finished':''} ${s.paused?'is-paused':''} ${transitioning?'is-transitioning':''}`} aria-label="Don't Collapse, MY GPA!">
     <canvas ref={canvas} className="game-canvas" onPointerDown={preview?undefined:drop} aria-label="游戏画面：点击或按空格松钩"/>
     <GameHud s={s}/>
+    {s.phase==='SWINGING'&&s.current?.kind==='temptation'&&<div className="sr-only" aria-label="当前诱惑效果">{s.current.name}：{temptationDefinition(s.current.id).preview.join('；')}。落空结束，可免费跳过。</div>}
     <ComboOverlay s={s} effects={prefs.effects} reducedMotion={reducedMotion}/>
     <nav className="top-controls" aria-label="游戏设置">
       {!preview&&s.phase!=='GAME_OVER'&&<button className="pixel-button gold pause-control" onClick={()=>{engine.current.togglePause();refresh();}}>Ⅱ 暂停</button>}
@@ -157,7 +160,7 @@ export function App(){
     </section>}
     {birdFlyaway&&<div className="bird-flyaway" aria-hidden="true"><img src={assetUrl('bird-fly.webp')} alt=""/></div>}
     {!preview&&s.message&&s.elapsed<s.messageUntil&&!s.finished&&<div className="sr-only" role="status" key={s.message}>{s.message}</div>}
-    <div className={`ddl-meter ${active&&s.ddl<=2?'urgent':''}`} aria-label={`DDL 剩余 ${active?Math.ceil(s.ddl):0} 秒`}><span className="ddl-title pixel-label">DDL</span><div className="ddl-clock">{active?<>{Math.ceil(s.ddl)}<small>s</small></>:'−'}</div><div className="ddl-track"><div style={{height:active?`${s.ddl/RULES.ddl*100}%`:'0%'}}/><i/><i/><i/></div></div>
+    <div className={`ddl-meter ${active&&s.ddl<=2?'urgent':''}`} aria-label={`DDL 剩余 ${active?Math.ceil(s.ddl):0} 秒`}><span className="ddl-title pixel-label">DDL</span><div className="ddl-clock">{active?<>{Math.ceil(s.ddl)}<small>s</small></>:'−'}</div><div className="ddl-track"><div style={{height:active?`${Math.min(100,s.ddl/s.ddlLimit*100)}%`:'0%'}}/><i/><i/><i/></div></div>
     <div className="bottom-actions">
       {active&&s.current?.kind==='temptation'&&<button className="pixel-button red skip" onPointerDown={event=>{event.preventDefault();event.stopPropagation();engine.current.skipCurrentBlock();refresh();}} onClick={event=>{if(event.detail===0){engine.current.skipCurrentBlock();refresh();}}}>» 跳过诱惑</button>}
       {!preview&&!s.finished&&<button className="pixel-button blue drop" disabled={!active||s.paused} onPointerDown={event=>{event.preventDefault();drop();}} onClick={event=>{if(event.detail===0)drop();}}>{active?'↓ 点击松钩':s.phase==='GAME_OVER'?'下把再来':'漂亮！'}</button>}
@@ -167,8 +170,8 @@ export function App(){
     {s.finished&&!panel&&<ResultScreen snapshot={s} tower={engine.current.tower} birdGained={birdGained} birdEnding={birdEnding} onRestart={restart} onHome={returnHome} onRecords={()=>openPanel('records')} randomUrl={randomPlayUrl.href}/>}
     {panel&&<div className="modal-backdrop"><section className="pixel-modal campus-modal" role="dialog" aria-modal="true" aria-labelledby="campus-title"><button className="close" aria-label="关闭窗口" onClick={closePanel}>×</button><span className="modal-eyebrow pixel-label">CAMPUS NOTICEBOARD</span><h2 id="campus-title">{panel==='rules'?'新生入学指南':panel==='records'?'本机成绩榜':'校园公告栏'}</h2><div className="tabs pixel-tabs"><button className={panel==='campus'?'selected':''} onClick={()=>setPanel('campus')}>本局账本</button><button className={panel==='rules'?'selected':''} onClick={()=>setPanel('rules')}>玩法指南</button><button className={panel==='records'?'selected':''} onClick={()=>setPanel('records')}>成绩榜</button></div>
       {panel==='campus'&&<><StatGrid s={s}/><div className="campus-options"><span>校园景色</span><button className="pixel-button blue" onClick={()=>prefs.toggle('night')}>{prefs.night?'星空校区':'日落校区'}</button></div><div className="campus-options"><label htmlFor="sway-style">楼体摇晃</label><select id="sway-style" value={prefs.detailedSway?'detailed':'classic'} onChange={()=>prefs.toggle('detailedSway')}><option value="detailed">细腻</option><option value="classic">经典</option></select></div><div className="campus-options"><span>小鸟气泡</span><button className="pixel-button gold" aria-pressed={prefs.birdBubble} onClick={()=>prefs.toggle('birdBubble')}>{prefs.birdBubble?'已开启':'已关闭'}</button></div><p className="small-print">每一块小楼，都算大学的一次努力。成绩仅保存在当前浏览器。</p><button className="pixel-button blue wide" onClick={closePanel}>{preview?'回到校园':'继续卷楼'}</button></>}
-      {panel==='rules'&&<><p>对准楼顶，点击画面或按 <kbd>SPACE</kbd> 松钩。每投只有 <b>{RULES.ddl} 秒</b>，落空一次即结束。</p><div className="rule-summary pixel-tags"><span>完美 ≤ 6%</span><span>落稳 ≤ 50%</span><span>超出即落空</span></div><p className="small-print">百分比为砖块中心相对下层中心的偏移 / 砖宽；志愿砖完美窗口为 12%。</p><div className="block-guide">{instructions.map(([name,desc,sprite])=><div key={name}><div className={`mini-room ${sprite===12?'fitness':''}`} style={sprite===12?{backgroundImage:`url("${assetUrl('fitness.webp')}")`}:{backgroundPosition:`${sprite%4*100/3}% ${Math.floor(sprite/4)*50}%`}}/><div><b>{name}</b><span>{desc}</span></div></div>)}</div><p className="small-print">PERFECT 每级连击增加 10% 正向收益，最高 ×2；课业额外 +1 连击。诱惑扣分不翻倍。竞赛记原始积分，每点折算 15 分。</p><p className="small-print">综测 = 层数×10 + GPA×100 + 科研×30 + 竞赛×15 + 志愿×5 + 实践×20。按 Esc 暂停，S 跳过诱惑。</p><button className="pixel-button blue wide" onClick={closePanel}>懂了，去卷楼</button></>}
-      {panel==='records'&&<><p className="small-print">当前浏览器 · 按综测总分排序 · 保留前 10 名</p>{prefs.records.length?<ol className="record-list">{prefs.records.map((r,i)=><li key={r.date+i}><span>{i+1}</span><div><b>{r.title}</b><small>{r.floor}F · GPA {r.gpa.toFixed(2)}</small></div><strong>{r.score}</strong></li>)}</ol>:<div className="empty-record">还没有成绩。<br/>校园的天际线，等你来写。</div>}<button className="pixel-button blue wide" onClick={closePanel}>返回校园</button></>}
+      {panel==='rules'&&<><p>对准楼顶，点击画面或按 <kbd>SPACE</kbd> 松钩。每投只有 <b>{RULES.ddl} 秒</b>（夜宵补给后的下一投为 7 秒），落空一次即结束。</p><div className="rule-summary pixel-tags"><span>完美 ≤ 6%</span><span>落稳 ≤ 50%</span><span>超出即落空</span></div><p className="small-print">百分比为砖块中心相对下层中心的偏移 / 砖宽；志愿砖完美窗口为 12%。</p><div className="block-guide">{instructions.map(([name,desc,sprite])=><div key={name}><div className={`mini-room ${sprite===12?'fitness':sprite===13?'snack':''}`} style={sprite===12?{backgroundImage:`url("${assetUrl('fitness.webp')}")`}:{backgroundPosition:`${(sprite===13?5:sprite)%4*100/3}% ${Math.floor((sprite===13?5:sprite)/4)*50}%`}}/><div><b>{name}</b><span>{desc}</span></div></div>)}</div><p className="small-print">PERFECT 每级连击增加 10% 正向收益，最高 ×2；课业额外 +1 连击。诱惑的实践 +2 / 竞赛 +3 是固定奖励，不乘连击或实践加成。竞赛每点折算 15 分。</p><p className="small-print">所有诱惑均可免费跳过，出现后至少间隔 3 投。GPA 低于 0.30 时，红果与跑刀暂不出现；其他诱惑保留原概率。下一投效果不叠加强度，跳过也消耗一投；合并状态后摆速为基础值的 55%～135%，摆幅为 70%～135%。</p><p className="small-print">综测 = 层数×10 + GPA×100 + 科研×30 + 竞赛×15 + 志愿×5 + 实践×20。按 Esc 暂停，S 跳过诱惑。</p><button className="pixel-button blue wide" onClick={closePanel}>懂了，去卷楼</button></>}
+      {panel==='records'&&<><p className="small-print">新版成绩 · 当前浏览器 · 保留前 10 名</p>{prefs.records.length?<ol className="record-list">{prefs.records.map((r,i)=><li key={r.date+i}><span>{i+1}</span><div><b>{r.title}</b><small>{r.floor}F · GPA {r.gpa.toFixed(2)}</small></div><strong>{r.score}</strong></li>)}</ol>:<div className="empty-record">还没有成绩。<br/>校园的天际线，等你来写。</div>}{prefs.legacyRecords.length>0&&<details className="legacy-records"><summary>旧版成绩存档（保留，单独排名）</summary><ol className="record-list">{prefs.legacyRecords.map((r,i)=><li key={r.date+i}><span>{i+1}</span><div><b>{r.title}</b><small>{r.floor}F · GPA {r.gpa.toFixed(2)}</small></div><strong>{r.score}</strong></li>)}</ol></details>}<button className="pixel-button blue wide" onClick={closePanel}>返回校园</button></>}
     </section></div>}
     {transitioning&&<PixelDissolve motion={prefs.effects&&!reducedMotion} onCovered={()=>{start();engine.current.paused=true;refresh();}} onComplete={()=>{transitionRef.current=false;setTransitioning(false);engine.current.paused=document.hidden;refresh();}}/>}
     <div className="sr-only" role="status" aria-live="polite">{s.phase==='CAMERA_SHIFT'?`${s.verdict}，${s.floor} 层，${s.rewardLabel}`:s.finished?`本局结束，${s.floor} 层，${s.score} 分`:''}</div>

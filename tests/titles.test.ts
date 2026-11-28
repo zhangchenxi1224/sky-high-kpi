@@ -5,7 +5,7 @@ import {catalog,emptyKpi,getTitle,RULES,type TitleStats} from '../src/game/rules
 import memes from '../src/config/memePack.json';
 import {createReportSvg,wrapReportComment} from '../src/features/report';
 
-const stats=(patch:Partial<TitleStats>={}):TitleStats=>({floor:16,kpi:{...emptyKpi(),gpa:1},accepted:0,maxSkipStreak:0,maxCombo:0,researchImperfect:0,counts:{},lateLandings:0,narrowLandings:0,ddlForcedMiss:false,...patch});
+const stats=(patch:Partial<TitleStats>={}):TitleStats=>({floor:16,kpi:{...emptyKpi(),gpa:1},accepted:0,costlyAccepted:patch.costlyAccepted??patch.accepted??0,maxSkipStreak:0,maxCombo:0,researchImperfect:0,counts:{},lateLandings:0,narrowLandings:0,ddlForcedMiss:false,...patch});
 const fixtures:Record<string,TitleStats>={
   chenze1103:stats({floor:10,kpi:{gpa:4,research:10,competition:10,volunteer:10.6,practice:5},accepted:3}),
   zeroGpa:stats({floor:10,kpi:emptyKpi(),accepted:3}),
@@ -51,7 +51,7 @@ test('all 20 titles are reachable and use their configured copy and stamp in the
 test('new title boundaries reject values just outside each requirement',()=>{
   const misses:Record<string,Partial<TitleStats>[]>={
     zeroGpa:[{floor:9},{kpi:{...emptyKpi(),gpa:.0001}}],
-    secretGrinder:[{floor:21},{accepted:1},{kpi:{...emptyKpi(),gpa:3.2999}}],
+    secretGrinder:[{floor:21},{accepted:1,costlyAccepted:1},{kpi:{...emptyKpi(),gpa:3.2999}}],
     precision:[{maxCombo:6}],
     deadline:[{floor:7},{lateLandings:2}],
     campusHelper:[{floor:11},{kpi:{...emptyKpi(),gpa:2.2001,volunteer:20}},{kpi:{...emptyKpi(),gpa:2.2,volunteer:19.9999}}],

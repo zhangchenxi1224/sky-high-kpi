@@ -3,9 +3,31 @@
 // This measures draw variety, not player survival, scoring or real-world win rates.
 import assert from 'node:assert/strict';
 import {writeFileSync} from 'node:fs';
-import {catalog,drawBlock,weights,seeded,OPENING_DRAW_RULES,RULES,TEMPTATION_RULES,type Kind} from '../src/game/rules';
+import {catalog,seeded,OPENING_DRAW_RULES,RULES,TEMPTATION_RULES,type Kind} from '../src/game/rules';
 
 const kinds:Kind[]=['study','volunteer','practice','research','competition','coffee','notes','temptation','fitness'];
+// Freeze the historical A baseline so future production updates cannot rewrite this experiment.
+const legacySchedule=[
+  {floor:3,p:[60,25,15,0,0,0,0,0],temptation:0},
+  {floor:8,p:[48,16,14,8,6,4,3,1],temptation:.01},
+  {floor:20,p:[40,13,12,12,11,5,4,3],temptation:.02},
+  {floor:35,p:[34,11,12,15,14,5,4,5],temptation:.03},
+];
+function legacyWeights(n:number,high=false,context:{history?:readonly Kind[];recentTemptation?:boolean;gpa?:number}={}){
+  const floor=Math.min(35,Math.max(3,n)),index=legacySchedule.findIndex(row=>row.floor>=floor);
+  const a=legacySchedule[Math.max(0,index-1)],b=legacySchedule[index],t=index===0?0:(floor-a.floor)/(b.floor-a.floor),blend=t*t*(3-2*t);
+  const base=a.p.map((p,i)=>(p+(b.p[i]-p)*blend)/100),recent=context.history?.slice(-2)??[];
+  const rest=n<=8&&recent.length===2&&recent.every(k=>k==='study');
+  const temptation=context.recentTemptation||(context.gpa??4)<.3?0:(a.temptation+(b.temptation-a.temptation)*blend)*(high?1.5:1);
+  const positive=base.slice(0,7).map((p,i)=>rest&&i===0?0:p),total=positive.reduce((a,b)=>a+b,0),fitness=n>=4?.04:0;
+  return [...positive.map(p=>p/total*(1-temptation-fitness)),temptation,fitness];
+}
+function legacyDraw(n:number,rng:()=>number,history:readonly Kind[]){
+  let roll=rng(),index=0;const odds=legacyWeights(n,false,{history,recentTemptation:history.slice(-3).includes('temptation'),gpa:2});
+  while(index<odds.length-1&&roll>=odds[index])roll-=odds[index++];
+  rng();return {kind:kinds[index]};
+}
+
 // Desired probabilities at the anchor floors. All rows sum to 100.
 const proposal=[
   {floor:3,percent:[40,22,16,12,10,0,0,0,0]},
@@ -35,7 +57,7 @@ for(let n=1;n<=100;n++)for(const high of [false,true])for(const gpa of [0,2]){
   for(const history of [[],['study','study'],['temptation']] as Kind[][]){
     const odds=proposedWeights(n,history,high,gpa);
     assert.ok(odds.every(p=>p>=0));assert.ok(Math.abs(odds.reduce((a,b)=>a+b,0)-1)<1e-12);
-    assert.equal(odds[8],n>=4?.04:0);assert.ok(Math.abs(odds[7]-weights(n,high,{history,recentTemptation:history.includes('temptation'),gpa})[7])<1e-12);
+    assert.equal(odds[8],n>=4?.04:0);assert.ok(Math.abs(odds[7]-legacyWeights(n,high,{history,recentTemptation:history.includes('temptation'),gpa})[7])<1e-12);
   }
 }
 const runs=50000,stages=[[1,3],[4,8],[9,20],[21,35],[36,60]];
@@ -45,7 +67,7 @@ function simulate(variant:'A'|'B'){
   for(let seed=1;seed<=runs;seed++){
     const rng=seeded(seed),history:Kind[]=[],firstCore=new Set<Kind>();let gap=0,longest=0;
     for(let n=1;n<=60;n++){
-      const block=variant==='A'?drawBlock(n,rng,false,history.slice(-3).includes('temptation'),2,history):proposedDraw(n,rng,history);
+      const block=variant==='A'?legacyDraw(n,rng,history):proposedDraw(n,rng,history);
       const kind=block.kind,stage=stages.findIndex(([a,b])=>n>=a&&n<=b);counts[stage][kinds.indexOf(kind)]++;
       if(n<=8){if(kinds.indexOf(kind)<5)firstCore.add(kind);if(kind==='study'||kind==='notes')gpaCount++;}
       if(n>=9){gap=kind==='study'||kind==='notes'?0:gap+1;longest=Math.max(longest,gap);}
@@ -57,6 +79,6 @@ function simulate(variant:'A'|'B'){
   longestGaps.sort((a,b)=>a-b);
   return {meanCoreTypesFirst8:rounded(distinct/runs),allFiveCoreTypesFirst8Percent:rounded(allFive/runs*100),meanGpaOffersFirst8:rounded(gpaCount/runs),runsWith8OfferGpaDroughtAfterFloor8Percent:rounded(longGapRuns/runs*100),maxGpaDroughtP95AfterFloor8:longestGaps[Math.ceil(runs*.95)-1],stageObservedPercent:counts.map((row,i)=>({floors:stages[i],percent:row.map(count=>rounded(count/(runs*(stages[i][1]-stages[i][0]+1))*100))}))};
 }
-const result={status:'proposal_not_deployed',rulesVersion:RULES.version,runsPerVariant:runs,offersPerRun:60,seeds:'1..50000',conditions:'Draw-only: normal pressure, GPA eligible (2.0), every offer advances the target floor, includes history cooldown; no landing/score/survival model.',kinds,proposalAnchors:proposal,baselineAnchors:proposal.map(row=>({floor:row.floor,percent:weights(row.floor).map(p=>rounded(p*100))})),A:simulate('A'),B:simulate('B')};
+const result={status:'historical_draw_only',rulesVersion:'2026.11.7',runsPerVariant:runs,offersPerRun:60,seeds:'1..50000',conditions:'Draw-only: normal pressure, GPA eligible (2.0), every offer advances the target floor, includes history cooldown; no landing/score/survival model.',kinds,proposalAnchors:proposal,baselineAnchors:proposal.map(row=>({floor:row.floor,percent:legacyWeights(row.floor).map(p=>rounded(p*100))})),A:simulate('A'),B:simulate('B')};
 writeFileSync('docs/balance-simulation-20261128.json',JSON.stringify(result,null,2)+'\n');
 console.log(JSON.stringify({A:result.A,B:result.B},null,2));

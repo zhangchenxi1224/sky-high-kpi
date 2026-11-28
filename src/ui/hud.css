@@ -55,3 +55,4 @@
   .compact-hud{max-width:140px}.kpi-panel{width:140px}
   .kpi-secondary.dense-metrics .metric-icon{width:10px;height:10px}
 }
+.mini-room.snack{position:relative}.mini-room.snack::after{content:'';position:absolute;left:10px;bottom:12px;width:14px;height:6px;background:#ff8d56;border-top:4px solid #fff9db;box-shadow:2px 2px #ffe066;image-rendering:pixelated}.legacy-records{margin:12px 0}.legacy-records summary{cursor:pointer;color:#ffe066;padding:8px 0}

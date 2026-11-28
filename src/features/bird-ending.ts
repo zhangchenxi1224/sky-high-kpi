@@ -49,7 +49,7 @@ export function settleBirdEnding(run:EndingRun,previous:LocalPlayerStats,random=
   let key:keyof typeof memes.birdEndingLines='normal',mood:BirdMood='idle';
   if(newPersona&&unlocked.length===personaIds.length){key='all_unlocked';mood='gold';}
   else if(newPersona&&record){key='double_win';mood='gold';}
-  else if(newPersona){key=first?'first_unlock':'new_persona';mood='unlock';}
+  else if(newPersona){key=first&&prev.unlockedPersonas.length===0?'first_unlock':'new_persona';mood='unlock';}
   else if(record){key=bestScore?'new_best':'new_best_floor';mood='gold';}
   else if(close){key='close_call';mood='encourage';}
   else if(rough){key='rough_run';mood='comfort';}
