@@ -148,16 +148,28 @@ test('the shorter crane preserves at least 2.5 bricks of landscape clearance and
     land(e,'study',20);next(e);
   }
 });
-test('difficulty increases smoothly from 1.43 rad/s and 18 degrees even past floor 30',()=>{
-  assert.deepEqual(difficulty(1),{effective:1,omega:1.43,angle:18});
-  assert.equal(difficulty(20).omega.toFixed(2),'2.71');
-  assert.equal(difficulty(20).angle.toFixed(1),'33.6');
+test('difficulty increases smoothly with an 8% speed and 6% amplitude uplift',()=>{
+  approx(difficulty(1).omega,1.5444);approx(difficulty(1).angle,19.08);
+  assert.equal(difficulty(20).omega.toFixed(2),'2.93');
+  assert.equal(difficulty(20).angle.toFixed(1),'35.6');
   for(let n=2;n<=100;n++){
     const current=difficulty(n),prev=difficulty(n-1);
-    assert.ok(current.omega>prev.omega&&current.omega<3.905);
-    assert.ok(current.angle>prev.angle&&current.angle<45);
+    assert.ok(current.omega>prev.omega&&current.omega<4.2174);
+    assert.ok(current.angle>prev.angle&&current.angle<47.7);
   }
   approx(difficulty(12,6).effective,8.15);approx(difficulty(2,60).effective,1.65);
+});
+
+test('swing uplift preserves high-pressure selection thresholds under relief and buffs',()=>{
+  for(const floor of [1,8,20,31,32,35,60,100])for(const rollback of [0,2,4,6]){
+    const d=difficulty(floor,rollback),progress=d.effective-1;
+    const oldOmega=1.43+(3.905-1.43)*(1-Math.exp(-progress/26));
+    const oldAngle=18+27*(1-Math.exp(-progress/22));
+    approx(d.omega/oldOmega,1.08);approx(d.angle/oldAngle,1.06);
+    for(const multiplier of [1,.55,1.12,1.15,1.12*1.15,.55*1.12*1.15]){
+      assert.equal(d.omega*multiplier>=RULES.highPressureOmega,oldOmega*multiplier>=3.135);
+    }
+  }
 });
 test('nine draw probabilities reserve 4% for fitness while reducing temptation',()=>{
   for(let n=1;n<100;n++)for(const boost of [false,true]){

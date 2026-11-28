@@ -1,5 +1,6 @@
 import memes from '../config/memePack.json';
-export const RULES = {version:'2026.11.7', width:88, height:88, gravity:1400, ddl:6, perfect:.06, volunteerPerfect:.12, omegaMin:1.43,omegaMax:3.905,highPressureOmega:3.135,towerSway:true,fitnessChance:.04,fitnessKpi:30,fitnessBoost:.15};
+const swingSpeedScale=1.08, swingAngleScale=1.06;
+export const RULES = {version:'2026.11.8', width:88, height:88, gravity:1400, ddl:6, perfect:.06, volunteerPerfect:.12, omegaMin:1.43*swingSpeedScale,omegaMax:3.905*swingSpeedScale,highPressureOmega:3.135*swingSpeedScale,angleMin:18*swingAngleScale,angleMax:45*swingAngleScale,towerSway:true,fitnessChance:.04,fitnessKpi:30,fitnessBoost:.15};
 export const OPENING_DRAW_RULES={lastFloor:8,maxStudyStreak:2};
 export const TEMPTATION_RULES={cooldown:3,minGpa:.30,highPressureMultiplier:1.5,minDifficultyProgress:.65,reliefDecay:1};
 export const temptationRelief=(floor:number)=>floor<=20?6:floor<=40?4:2;
@@ -14,7 +15,7 @@ export function difficulty(n:number,rollback=0){
   const effective=Math.max(1+(Math.max(1,n)-1)*TEMPTATION_RULES.minDifficultyProgress,n-clamp(rollback,0,6));
   const climbed=effective-1;
   const omega=RULES.omegaMin+(RULES.omegaMax-RULES.omegaMin)*(1-Math.exp(-climbed/26));
-  const angle=18+27*(1-Math.exp(-climbed/22));
+  const angle=RULES.angleMin+(RULES.angleMax-RULES.angleMin)*(1-Math.exp(-climbed/22));
   return {effective,omega,angle};
 }
 export const judge=(delta:number,kind:Kind)=>Math.abs(delta)<=RULES.width*(kind==='volunteer'?.12:.06)+1e-9?'PERFECT':Math.abs(delta)<=RULES.width*.5+1e-9?'SUCCESS':'MISS';
