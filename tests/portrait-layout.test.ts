@@ -17,8 +17,8 @@ test('portrait HUD keeps its 44px panel and 52px tools above the playfield, incl
   }
 });
 
-test('crane shrinks by another 80% around the screen edge and releasing cannot jump the brick',()=>{
-  approx(CRANE_SCALE,.8*.8);
+test('crane restores the previous 80% size around the screen edge without a release jump',()=>{
+  approx(CRANE_SCALE,.8);
   for(const [width,height,top] of [[430,900,86],[430,580,86],[1280,720,0]]){
     for(const floor of [0,3,6,18,80]){
       const e=new GameEngine(1);e.floor=floor;e.setViewport(width,height,top);e.start();
@@ -27,7 +27,7 @@ test('crane shrinks by another 80% around the screen edge and releasing cannot j
       for(const phase of [-Math.PI/2,0,Math.PI/2]){
         e.phaseAngle=phase;e.updateHook();const original=hookPosition(phase,e.params.angle,oldLength);
         approx(e.hookX-e.anchorX,original.x*CRANE_SCALE);
-        approx(top+(e.hookY-CRANE_HEAD.top)*e.viewZoom,(top+(oldPivot+original.y-24)*e.viewZoom)*.8*.8);
+        approx(top+(e.hookY-CRANE_HEAD.top)*e.viewZoom,(top+(oldPivot+original.y-24)*e.viewZoom)*.8);
         assert.ok(e.currentY+RULES.height<e.topY);
         const x=e.currentX,y=e.currentY;e.drop();approx(e.currentX,x);approx(e.currentY,y);e.phase='SWINGING';
       }
